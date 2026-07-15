@@ -10,7 +10,10 @@ import os
 # =====================================================
 
 
-model_path = r"C:\Users\Mihi\Desktop\Behaviour Pattern Identification Model\models\behavior_random_forest.pkl"
+model_path = os.path.join(
+    "models",
+    "behavior_random_forest.pkl"
+)
 
 
 model = joblib.load(model_path)
@@ -118,7 +121,10 @@ print(importance_df)
 # =====================================================
 
 
-output_folder = r"C:\Users\Mihi\Desktop\Behaviour Pattern Identification Model\results\explainability"
+output_folder = os.path.join(
+    "results",
+    "explainability"
+)
 
 
 os.makedirs(
