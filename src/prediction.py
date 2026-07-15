@@ -7,7 +7,10 @@ import joblib
 # 1. Load Trained Random Forest Model
 # =====================================================
 
-model_path = r"C:\Users\Mihi\Desktop\Behaviour Pattern Identification Model\models\behavior_random_forest.pkl"
+model_path = os.path.join(
+    "models",
+    "behavior_random_forest.pkl"
+)
 
 
 model = joblib.load(model_path)
@@ -20,8 +23,11 @@ print("Random Forest Model Loaded Successfully")
 # =====================================================
 # 2. Load New Employee Data
 # =====================================================
-
-input_path = r"C:\Users\Mihi\Desktop\Behaviour Pattern Identification Model\dataset\prediction\new_employee_data.csv"
+input_path = os.path.join(
+    "dataset",
+    "prediction",
+    "new_employee_data.csv"
+)
 
 
 new_employee_df = pd.read_csv(input_path)
@@ -247,8 +253,10 @@ prediction_result["Overall_Behavior_Level"] = (
 # 9. Save Prediction Results
 # =====================================================
 
-
-output_path = r"C:\Users\Mihi\Desktop\Behaviour Pattern Identification Model\results\predicted_behavior.csv"
+output_path = os.path.join(
+    "results",
+    "predicted_behavior.csv"
+)
 
 
 os.makedirs(
