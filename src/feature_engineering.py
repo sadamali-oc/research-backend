@@ -6,7 +6,11 @@ import os
 # 1. Load Preprocessed Dataset
 # =====================================
 
-input_path = r"C:\Users\Mihi\Desktop\Behaviour Pattern Identification Model\dataset\processed\behaviour_processed.csv"
+input_path = os.path.join(
+    "dataset",
+    "processed",
+    "behaviour_processed.csv"
+)
 
 
 df = pd.read_csv(input_path)
@@ -241,7 +245,12 @@ behavior_df = behavior_df.round(2)
 # =====================================
 
 
-output_path = r"C:\Users\Mihi\Desktop\Behaviour Pattern Identification Model\dataset\processed\engineered_behavior.csv"
+output_path = os.path.join(
+    "dataset",
+    "processed",
+    "engineered_behavior.csv"
+)
+
 
 
 os.makedirs(
