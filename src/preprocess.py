@@ -6,7 +6,11 @@ import os
 # Load Dataset
 # ==============================
 
-input_path = r"C:\Users\Mihi\Desktop\Behaviour Pattern Identification Model\dataset\raw\Data Set.csv"
+input_path = os.path.join(
+    "dataset",
+    "raw",
+    "Data Set.csv"
+)
 
 
 df = pd.read_csv(
@@ -98,7 +102,11 @@ print(behavior_df.info())
 # ==============================
 
 
-output_path = r"C:\Users\Mihi\Desktop\Behaviour Pattern Identification Model\dataset\processed\behaviour_processed.csv"
+output_path = os.path.join(
+    "dataset",
+    "processed",
+    "behaviour_processed.csv"
+)
 
 
 # Create processed folder if not exists
