@@ -48,7 +48,7 @@ def run_stage(file_name, stage_name):
 
 
 run_stage(
-    "preprocessing.py",
+    "preprocess.py",
     "Preprocessing"
 )
 
@@ -62,7 +62,7 @@ run_stage(
 
 
 run_stage(
-    "behavioral_scoring.py",
+    "behaviour_pattern_identification_engine.py",
     "Behavioral Scoring"
 )
 

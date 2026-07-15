@@ -6,7 +6,11 @@ import os
 # 1. Load Engineered Behavior Dataset
 # =====================================
 
-input_path = r"C:\Users\Mihi\Desktop\Behaviour Pattern Identification Model\dataset\processed\engineered_behavior.csv"
+input_path = os.path.join(
+    "dataset",
+    "processed",
+    "engineered_behavior.csv"
+)
 
 
 df = pd.read_csv(input_path)
@@ -112,7 +116,11 @@ df["Overall_Behavior_Level"] = (
 # =====================================
 
 
-output_path = r"C:\Users\Mihi\Desktop\Behaviour Pattern Identification Model\dataset\processed\behavior_scored.csv"
+output_path = os.path.join(
+    "dataset",
+    "processed",
+    "behavior_scored.csv"
+)
 
 
 

@@ -15,9 +15,17 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 # =====================================================
 
 
-behavior_path = r"C:\Users\Mihi\Desktop\Behaviour Pattern Identification Model\dataset\processed\behavior_scored.csv"
+behavior_path = os.path.join(
+    "dataset",
+    "processed",
+    "behavior_scored.csv"
+)
 
-raw_behavior_path = r"C:\Users\Mihi\Desktop\Behaviour Pattern Identification Model\dataset\processed\behaviour_processed.csv"
+raw_behavior_path = os.path.join(
+    "dataset",
+    "processed",
+    "behaviour_processed.csv"
+)
 
 
 
@@ -330,7 +338,9 @@ prediction_df = pd.DataFrame(
 
 
 
-results_path = r"C:\Users\Mihi\Desktop\Behaviour Pattern Identification Model\results"
+results_path = os.path.join(
+    "results"
+)
 
 
 
@@ -458,8 +468,7 @@ print(evaluation_df)
 # 11. Save Model
 # =====================================================
 
-
-model_folder = r"C:\Users\Mihi\Desktop\Behaviour Pattern Identification Model\models"
+model_folder = r"models"
 
 
 

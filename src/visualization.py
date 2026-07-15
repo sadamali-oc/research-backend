@@ -8,7 +8,7 @@ import numpy as np
 # 1. Load Prediction Dataset
 # =====================================================
 
-input_path = r"C:\Users\Mihi\Desktop\Behaviour Pattern Identification Model\results\predicted_behavior.csv"
+input_path = r"results\predicted_behavior.csv"
 
 
 df = pd.read_csv(input_path)
@@ -29,7 +29,7 @@ df["Employee_ID"] = range(1, len(df) + 1)
 # =====================================================
 
 
-output_folder = r"C:\Users\Mihi\Desktop\Behaviour Pattern Identification Model\results\visualizations"
+output_folder = r"results\visualizations"
 
 
 os.makedirs(
