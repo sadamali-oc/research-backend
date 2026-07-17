@@ -6,20 +6,27 @@ import os
 
 
 # =====================================================
-# 1. Load Trained Model
+# 1. Load Trained XGBoost Model
 # =====================================================
 
 
 model_path = os.path.join(
+
     "models",
-    "behavior_random_forest.pkl"
+
+    "xgboost_behavior_model.pkl"
+
 )
+
 
 
 model = joblib.load(model_path)
 
 
-print("Random Forest model loaded successfully")
+
+print("XGBoost model loaded successfully")
+
+
 
 
 
@@ -54,15 +61,21 @@ features = [
 
 
 
+
+
 # =====================================================
-# 3. Extract Feature Importance
+# 3. Extract XGBoost Feature Importance
 # =====================================================
 
 
 importance_values = []
 
 
+
+# MultiOutputRegressor contains multiple XGBRegressor models
+
 for estimator in model.estimators_:
+
 
     importance_values.append(
 
@@ -72,7 +85,10 @@ for estimator in model.estimators_:
 
 
 
+
+
 # Average importance from all output models
+
 
 average_importance = (
 
@@ -84,6 +100,13 @@ average_importance = (
 
 )
 
+
+
+
+
+# =====================================================
+# 4. Create Explainability Dataset
+# =====================================================
 
 
 importance_df = pd.DataFrame(
@@ -110,21 +133,30 @@ importance_df = importance_df.sort_values(
 
 
 
-print("\nFeature Importance Ranking")
+
+
+print("\nXGBoost Feature Importance Ranking")
+
 
 print(importance_df)
 
 
 
+
+
 # =====================================================
-# 4. Save Importance Result
+# 5. Save Importance Results
 # =====================================================
 
 
 output_folder = os.path.join(
-    "results",
+
+    "Results",
+
     "explainability"
+
 )
+
 
 
 os.makedirs(
@@ -137,13 +169,14 @@ os.makedirs(
 
 
 
+
 importance_df.to_csv(
 
     os.path.join(
 
         output_folder,
 
-        "feature_importance.csv"
+        "xgboost_feature_importance.csv"
 
     ),
 
@@ -153,12 +186,15 @@ importance_df.to_csv(
 
 
 
+
+
 # =====================================================
-# 5. Visualization
+# 6. Create Feature Importance Chart
 # =====================================================
 
 
 plt.figure(figsize=(10,6))
+
 
 
 plt.barh(
@@ -170,11 +206,13 @@ plt.barh(
 )
 
 
+
 plt.xlabel(
 
     "Importance Score"
 
 )
+
 
 
 plt.ylabel(
@@ -184,17 +222,21 @@ plt.ylabel(
 )
 
 
+
 plt.title(
 
-    "Random Forest Feature Importance"
+    "XGBoost Feature Importance"
 
 )
+
 
 
 plt.gca().invert_yaxis()
 
 
+
 plt.tight_layout()
+
 
 
 
@@ -204,7 +246,7 @@ plt.savefig(
 
         output_folder,
 
-        "feature_importance_chart.png"
+        "xgboost_feature_importance_chart.png"
 
     )
 
@@ -216,11 +258,19 @@ plt.close()
 
 
 
+
+
+# =====================================================
+# Completion Message
+# =====================================================
+
+
 print("\n===================================")
 
-print("Explainability Completed Successfully")
+print("XGBoost Explainability Completed Successfully")
 
 print("===================================")
+
 
 
 print("\nSaved Location:")

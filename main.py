@@ -3,93 +3,185 @@ import subprocess
 import sys
 
 
+
 print("====================================")
 print("Behavior Pattern Identification Model")
 print("Starting Execution Pipeline")
 print("====================================")
 
 
-# Project root directory
 
-project_path = os.path.dirname(os.path.abspath(__file__))
+# =====================================================
+# Project Root Directory
+# =====================================================
 
 
-# Source folder
+project_path = os.path.dirname(
 
-src_path = os.path.join(project_path, "src")
+    os.path.abspath(__file__)
 
+)
+
+
+
+# Source Folder
+
+src_path = os.path.join(
+
+    project_path,
+
+    "src"
+
+)
+
+
+
+# =====================================================
+# Function to Run Each Stage
+# =====================================================
 
 
 def run_stage(file_name, stage_name):
 
-    print(f"\nRunning {stage_name} Stage...")
+    print(
+        f"\nRunning {stage_name} Stage..."
+    )
 
-    file_path = os.path.join(src_path, file_name)
+
+    file_path = os.path.join(
+
+        src_path,
+
+        file_name
+
+    )
+
 
     try:
 
         subprocess.run(
-            [sys.executable, file_path],
+
+            [
+
+                sys.executable,
+
+                file_path
+
+            ],
+
             check=True
+
         )
 
-        print(f"{stage_name} Completed Successfully")
 
-    except Exception as e:
+        print(
 
-        print(f"{stage_name} Failed")
+            f"{stage_name} Completed Successfully"
+
+        )
+
+
+    except subprocess.CalledProcessError as e:
+
+
+        print(
+
+            f"{stage_name} Failed"
+
+        )
+
         print(e)
 
+        sys.exit(1)
 
 
-# ==============================
+
+# =====================================================
 # Pipeline Execution
-# ==============================
+# =====================================================
+
 
 
 run_stage(
+
     "preprocess.py",
+
     "Preprocessing"
+
 )
 
 
 
 run_stage(
+
     "feature_engineering.py",
+
     "Feature Engineering"
+
 )
 
 
 
 run_stage(
+
     "behaviour_pattern_identification_engine.py",
-    "behaviour_pattern_identification_engine.py",
+
     "Behavioral Scoring"
+
 )
 
 
 
+# XGBoost Model Training
+
 run_stage(
-    "random_forest.py",
-    "Multi-Output Random Forest"
+
+    "xgboost_model.py",
+
+    "XGBoost Training"
+
 )
 
 
 
+# Generate Predictions
+
 run_stage(
+
     "prediction.py",
-    "Prediction"
+
+    "XGBoost Prediction"
+
 )
 
 
 
+# Explainability
+
 run_stage(
+
+    "explainability.py",
+
+    "XGBoost Explainability"
+
+)
+
+
+
+# Generate Graphs
+
+run_stage(
+
     "visualization.py",
+
     "Visualization"
+
 )
 
 
 
 print("\n====================================")
+
 print("Behavior Pattern Identification Completed Successfully")
+
 print("====================================")

@@ -4,11 +4,16 @@ import os
 import numpy as np
 
 
+
 # =====================================================
 # 1. Load Prediction Dataset
 # =====================================================
 
-input_path = r"results\predicted_behavior.csv"
+
+input_path = os.path.join(
+    "results",
+    "predicted_behavior.csv"
+)
 
 
 df = pd.read_csv(input_path)
@@ -19,8 +24,13 @@ print("Prediction dataset loaded successfully")
 print(df.head())
 
 
-# Add employee IDs
-df["Employee_ID"] = range(1, len(df) + 1)
+
+# Add Employee IDs
+
+df["Employee_ID"] = range(
+    1,
+    len(df) + 1
+)
 
 
 
@@ -29,7 +39,10 @@ df["Employee_ID"] = range(1, len(df) + 1)
 # =====================================================
 
 
-output_folder = r"results\visualizations"
+output_folder = os.path.join(
+    "results",
+    "visualizations"
+)
 
 
 os.makedirs(
@@ -59,6 +72,21 @@ behavior_columns = [
 ]
 
 
+behavior_labels = [
+
+    "Productivity",
+
+    "Communication",
+
+    "Leadership",
+
+    "Learning",
+
+    "Collaboration"
+
+]
+
+
 average_scores = df[behavior_columns].mean()
 
 
@@ -68,22 +96,21 @@ plt.figure(figsize=(8,5))
 
 plt.bar(
 
-    [
-        "Productivity",
-        "Communication",
-        "Leadership",
-        "Learning",
-        "Collaboration"
-    ],
+    behavior_labels,
 
     average_scores.values
 
 )
 
 
-plt.xlabel("Behavior Categories")
+plt.xlabel(
+    "Behavior Categories"
+)
 
-plt.ylabel("Average Percentage (%)")
+
+plt.ylabel(
+    "Average Percentage (%)"
+)
 
 
 plt.title(
@@ -91,10 +118,15 @@ plt.title(
 )
 
 
-plt.xticks(rotation=45)
+plt.xticks(
+    rotation=45
+)
 
 
-plt.ylim(0,100)
+plt.ylim(
+    0,
+    100
+)
 
 
 plt.tight_layout()
@@ -127,7 +159,11 @@ print("Average behavior chart created")
 # =====================================================
 
 
-level_count = df["Overall_Behavior_Level"].value_counts()
+level_count = df[
+
+    "Overall_Behavior_Level"
+
+].value_counts()
 
 
 
@@ -143,17 +179,21 @@ plt.bar(
 )
 
 
-plt.xlabel("Behavior Level")
+
+plt.xlabel(
+    "Behavior Level"
+)
 
 
-plt.ylabel("Number of Employees")
+plt.ylabel(
+    "Number of Employees"
+)
 
 
 plt.title(
-
     "Overall Employee Behavioral Level Distribution"
-
 )
+
 
 
 plt.tight_layout()
@@ -189,8 +229,11 @@ print("Behavior distribution chart created")
 print("\nAvailable Employees:")
 
 print(
+
     "Employee 1 to Employee",
+
     len(df)
+
 )
 
 
@@ -200,15 +243,20 @@ while True:
     try:
 
         employee_number = int(
+
             input(
+
                 "\nEnter Employee Number for Radar Chart: "
+
             )
+
         )
 
 
-        if employee_number >= 1 and employee_number <= len(df):
+        if 1 <= employee_number <= len(df):
 
             break
+
 
         else:
 
@@ -217,12 +265,11 @@ while True:
             )
 
 
-    except:
+    except ValueError:
 
         print(
             "Please enter a valid number."
         )
-
 
 
 
@@ -242,7 +289,6 @@ employee_data = df.loc[
 # =====================================================
 
 
-
 values = [
 
     employee_data["Predicted_Productivity"],
@@ -256,7 +302,6 @@ values = [
     employee_data["Predicted_Collaboration"]
 
 ]
-
 
 
 categories = [
@@ -277,7 +322,8 @@ categories = [
 
 # Close radar shape
 
-values += values[:1]
+values.append(values[0])
+
 
 
 angles = np.linspace(
@@ -390,13 +436,15 @@ plt.close()
 
 
 print(
+
     f"Radar chart created for Employee {employee_number}"
+
 )
 
 
 
 # =====================================================
-# 7. Save Average Scores
+# 7. Save Average Behavior Scores
 # =====================================================
 
 
@@ -404,26 +452,9 @@ average_df = pd.DataFrame(
 
     {
 
-        "Behavior":
+        "Behavior": behavior_labels,
 
-        [
-
-            "Productivity",
-
-            "Communication",
-
-            "Leadership",
-
-            "Learning",
-
-            "Collaboration"
-
-        ],
-
-
-        "Average_Score":
-
-        average_scores.values
+        "Average_Score": average_scores.values
 
     }
 
