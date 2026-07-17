@@ -3,14 +3,11 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
+import requests
+import sys
+import os
 
-# Page configuration
-st.set_page_config(
-    page_title="AI Employee Performance Appraisal System",
-    page_icon="🏢",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# No st.set_page_config here - it's already set in app.py
 
 # Custom CSS for professional look
 st.markdown("""
@@ -195,8 +192,37 @@ st.markdown("""
         height: 1px;
         background: linear-gradient(to right, transparent, #e2e8f0, transparent);
     }
+
+    /* API status indicator */
+    .api-status {
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        margin: 0.5rem 0;
+    }
+    
+    .api-status-online {
+        background: #c6f6d5;
+        color: #22543d;
+        border-left: 4px solid #48bb78;
+    }
+    
+    .api-status-offline {
+        background: #fed7d7;
+        color: #9b2c2c;
+        border-left: 4px solid #fc8181;
+    }
     </style>
 """, unsafe_allow_html=True)
+
+# Check API connection
+API_URL = "http://localhost:8000"
+
+try:
+    response = requests.get(f"{API_URL}/health", timeout=2)
+    api_connected = response.status_code == 200
+except:
+    api_connected = False
 
 # Sidebar
 with st.sidebar:
@@ -206,15 +232,32 @@ with st.sidebar:
         </div>
     """, unsafe_allow_html=True)
 
+    # API Status
+    st.markdown("### 🔌 System Status")
+    if api_connected:
+        st.markdown("""
+            <div class="api-status api-status-online">
+                ✅ Backend API: Online
+            </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+            <div class="api-status api-status-offline">
+                ❌ Backend API: Offline
+            </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("---")
+
     # Navigation
     st.markdown("### 📋 Modules")
 
     modules = [
-        {"icon": "📊", "name": "Dashboard", "active": True},
-        {"icon": "🎯", "name": "Performance Prediction", "active": False},
-        {"icon": "🧠", "name": "Behavior Pattern", "active": False},
-        {"icon": "⚖️", "name": "Bias Detection", "active": False},
-        {"icon": "🤝", "name": "Conflict Resolution", "active": False}
+        {"icon": "📊", "name": "Dashboard", "page": "dashboard", "active": True},
+        {"icon": "🎯", "name": "Performance Prediction", "page": "performance", "active": False},
+        {"icon": "🧠", "name": "Behavior Pattern", "page": "behavior_pattern", "active": False},
+        {"icon": "⚖️", "name": "Bias Detection", "page": "bias_detection", "active": False},
+        {"icon": "🤝", "name": "Conflict Resolution", "page": "conflict_resolution", "active": False}
     ]
 
     for module in modules:
@@ -225,11 +268,9 @@ with st.sidebar:
                 </div>
             """, unsafe_allow_html=True)
         else:
-            st.markdown(f"""
-                <div class="sidebar-module">
-                    {module['icon']} {module['name']}
-                </div>
-            """, unsafe_allow_html=True)
+            # Make non-active modules clickable
+            if st.button(f"{module['icon']} {module['name']}", key=module['page']):
+                st.switch_page(f"pages/{module['page']}.py")
 
     st.markdown("---")
 
@@ -270,44 +311,81 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
+# Try to fetch real data from API
+if api_connected:
+    try:
+        # Get employee count
+        emp_response = requests.get(f"{API_URL}/api/employees?limit=1")
+        if emp_response.status_code == 200:
+            emp_data = emp_response.json()
+            total_employees = emp_data.get('total', 0)
+        else:
+            total_employees = 0
+
+        # Get prediction stats
+        stats_response = requests.get(f"{API_URL}/api/predictions/stats")
+        if stats_response.status_code == 200:
+            stats = stats_response.json()
+            total_predictions = stats.get('total_predictions', 0)
+            high_performers = stats.get('high_performers', 0)
+            medium_performers = stats.get('medium_performers', 0)
+            low_performers = stats.get('low_performers', 0)
+        else:
+            total_predictions = 0
+            high_performers = 0
+            medium_performers = 0
+            low_performers = 0
+    except:
+        total_employees = 0
+        total_predictions = 0
+        high_performers = 0
+        medium_performers = 0
+        low_performers = 0
+else:
+    total_employees = 0
+    total_predictions = 0
+    high_performers = 0
+    medium_performers = 0
+    low_performers = 0
+
 # Key Metrics Row
 st.markdown('<div class="sub-header">📈 System Overview</div>', unsafe_allow_html=True)
 
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
-    st.markdown("""
+    st.markdown(f"""
         <div class="metric-card" style="border-left-color: #4299e1;">
-            <div class="metric-title">Modules</div>
-            <div class="metric-value">4</div>
-            <div class="metric-sub">Integrated AI modules</div>
+            <div class="metric-title">Total Employees</div>
+            <div class="metric-value">{total_employees}</div>
+            <div class="metric-sub">👥 Registered in system</div>
         </div>
     """, unsafe_allow_html=True)
 
 with col2:
-    st.markdown("""
+    st.markdown(f"""
         <div class="metric-card" style="border-left-color: #48bb78;">
-            <div class="metric-title">Performance Factors</div>
-            <div class="metric-value">9</div>
-            <div class="metric-sub">Key performance indicators</div>
+            <div class="metric-title">Predictions Made</div>
+            <div class="metric-value">{total_predictions}</div>
+            <div class="metric-sub">🎯 Performance predictions</div>
         </div>
     """, unsafe_allow_html=True)
 
 with col3:
-    st.markdown("""
+    st.markdown(f"""
         <div class="metric-card" style="border-left-color: #ed8936;">
-            <div class="metric-title">Behavioral Indicators</div>
-            <div class="metric-value">7</div>
-            <div class="metric-sub">Behavioral metrics</div>
+            <div class="metric-title">High Performers</div>
+            <div class="metric-value">{high_performers}</div>
+            <div class="metric-sub">⭐ Top performing employees</div>
         </div>
     """, unsafe_allow_html=True)
 
 with col4:
-    st.markdown("""
+    st.markdown(f"""
         <div class="metric-card" style="border-left-color: #9f7aea;">
-            <div class="metric-title">ML Algorithm</div>
-            <div class="metric-value">Random Forest</div>
-            <div class="metric-sub">Classification model</div>
+            <div class="metric-title">Modules</div>
+            <div class="metric-value">4</div>
+            <div class="metric-sub">🧩 Integrated AI modules</div>
         </div>
     """, unsafe_allow_html=True)
 
