@@ -1,17 +1,7 @@
-from backend.models.master import (
-    Employee,
-    PerformanceMetric,
-    Project,
-    EmployeeProject,
-    LearningActivity,
-    MeetingAttendance
-)
+from backend.models.master import EmployeePerformanceView
+from backend.models.performance_results import PerformanceResult
 
 __all__ = [
-    'Employee',
-    'PerformanceMetric',
-    'Project',
-    'EmployeeProject',
-    'LearningActivity',
-    'MeetingAttendance'
+    'EmployeePerformanceView',
+    'PerformanceResult'
 ]
