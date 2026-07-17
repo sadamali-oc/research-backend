@@ -1,657 +1,325 @@
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
-import os
 import joblib
+import numpy as np
+import seaborn as sns
 
+from pathlib import Path
 from matplotlib.backends.backend_pdf import PdfPages
-from sklearn.metrics import confusion_matrix
 
+import matplotlib
+matplotlib.use("Agg")  # Prevent GUI errors
 
-
-# =====================================================
-# SETTINGS
-# =====================================================
-
-plt.style.use("seaborn-v0_8-whitegrid")
-
-os.makedirs(
-    "results",
-    exist_ok=True
+from sklearn.metrics import (
+    accuracy_score,
+    f1_score,
+    roc_auc_score,
+    roc_curve,
+    confusion_matrix
 )
 
-
-
-print("\nSTARTING THESIS STYLE VISUALIZATION\n")
-
-
-
-# =====================================================
-# LOAD FILES
-# =====================================================
-
-
-comparison_file = "results/model_comparison.xlsx"
-
-feature_file = "results/feature_importance.xlsx"
-
-dataset_file = "data/performance_features.xlsx"
-
-model_file = "results/best_model.pkl"
-
-
-
-comparison = pd.read_excel(
-    comparison_file
+from sklearn.model_selection import (
+    train_test_split,
+    learning_curve
 )
 
+# ======================================================
+# CONFIGURATION
+# ======================================================
 
-features = pd.read_excel(
-    feature_file
-)
+RESULT_PATH = Path("results")
 
+DATA_FILE = Path("data/performance_future_features.xlsx")
 
-data = pd.read_excel(
-    dataset_file
-)
+MODEL_FILE = RESULT_PATH / "best_model.pkl"
+ENCODER_FILE = RESULT_PATH / "feature_encoders.pkl"
+FEATURE_FILE = RESULT_PATH / "feature_names.pkl"
 
+PDF_FILE = RESULT_PATH / "Future_Performance_Evaluation_Report.pdf"
 
+CATEGORY_NAMES = {
+    0: "Low",
+    1: "Medium",
+    2: "High"
+}
 
-# =====================================================
-# CONVERT VALUES TO %
-# =====================================================
+CATEGORY_COLORS = ["tomato", "gold", "seagreen"]
 
 
-comparison_percent = comparison.copy()
+# ======================================================
+# LOAD MODEL
+# ======================================================
 
+def load_model():
+    if not MODEL_FILE.exists():
+        raise FileNotFoundError("Model file not found")
 
-for col in [
-    "Accuracy",
-    "F1 Score",
-    "ROC-AUC",
-    "CV Mean"
-]:
+    model = joblib.load(MODEL_FILE)
 
-    if col in comparison_percent.columns:
+    print("Loaded Model:", type(model).__name__)
+    return model
 
-        comparison_percent[col] = (
-            comparison_percent[col]*100
-        ).round(2)
 
+# ======================================================
+# LOAD DATA
+# ======================================================
 
+def prepare_data():
+    df = pd.read_excel(DATA_FILE)
 
-features["Importance (%)"] = (
+    TARGET = "Future_Performance_Category"
 
-    features["Importance"]*100
-
-).round(2)
-
-
-
-features = features.sort_values(
-    "Importance (%)",
-    ascending=False
-)
-
-
-
-# =====================================================
-# PDF
-# =====================================================
-
-
-pdf_path = (
-    "results/Performance_Evaluation_Thesis_Report.pdf"
-)
-
-
-
-with PdfPages(pdf_path) as pdf:
-
-
-
-    # =================================================
-    # PAGE 1
-    # MODEL COMPARISON TABLE
-    # =================================================
-
-
-    fig, ax = plt.subplots(
-        figsize=(12,5)
-    )
-
-    ax.axis("off")
-
-
-    table_data = comparison_percent.copy()
-
-
-    for col in table_data.columns:
-
-        if col in [
-            "Accuracy",
-            "F1 Score",
-            "ROC-AUC",
-            "CV Mean"
-        ]:
-
-            table_data[col] = (
-                table_data[col].astype(str)
-                +"%"
-            )
-
-
-    table=ax.table(
-
-        cellText=table_data.values,
-
-        colLabels=table_data.columns,
-
-        loc="center"
-
-    )
-
-
-    table.auto_set_font_size(False)
-
-    table.set_fontsize(10)
-
-    table.scale(
-        1,
-        2
-    )
-
-
-    plt.title(
-
-        "Table 1: Performance Comparison of Machine Learning Algorithms",
-
-        fontsize=15,
-
-        fontweight="bold"
-
-    )
-
-
-    pdf.savefig(
-        fig,
-        dpi=300,
-        bbox_inches="tight"
-    )
-
-    plt.close()
-
-
-
-
-    # =================================================
-    # PAGE 2
-    # ACCURACY GRAPH
-    # =================================================
-
-
-    fig,ax=plt.subplots(
-        figsize=(9,5)
-    )
-
-
-    temp=comparison_percent.sort_values(
-        "Accuracy"
-    )
-
-
-    bars=ax.bar(
-
-        temp["Algorithm"],
-
-        temp["Accuracy"]
-
-    )
-
-
-    ax.set_title(
-
-        "Figure 1: Accuracy Comparison of Prediction Models",
-
-        fontsize=14,
-
-        fontweight="bold"
-
-    )
-
-
-    ax.set_ylabel(
-        "Accuracy (%)"
-    )
-
-
-    ax.set_ylim(
-        0,
-        100
-    )
-
-
-    for bar in bars:
-
-        ax.text(
-
-            bar.get_x()+bar.get_width()/2,
-
-            bar.get_height()+1,
-
-            f"{bar.get_height():.1f}%",
-
-            ha="center",
-
-            fontweight="bold"
-
-        )
-
-
-    plt.xticks(
-        rotation=20
-    )
-
-
-    pdf.savefig(
-        fig,
-        dpi=300,
-        bbox_inches="tight"
-    )
-
-    plt.close()
-
-
-
-
-    # =================================================
-    # PAGE 3
-    # F1 AND ROC
-    # =================================================
-
-
-    fig,ax=plt.subplots(
-        figsize=(10,6)
-    )
-
-
-    x=np.arange(
-        len(comparison_percent)
-    )
-
-
-    width=0.25
-
-
-    ax.bar(
-        x-width,
-        comparison_percent["F1 Score"],
-        width,
-        label="F1 Score"
-    )
-
-
-    ax.bar(
-        x,
-        comparison_percent["ROC-AUC"],
-        width,
-        label="ROC-AUC"
-    )
-
-
-    ax.bar(
-        x+width,
-        comparison_percent["CV Mean"],
-        width,
-        label="Cross Validation"
-    )
-
-
-    ax.set_xticks(x)
-
-    ax.set_xticklabels(
-        comparison_percent["Algorithm"],
-        rotation=20
-    )
-
-
-    ax.set_ylabel(
-        "Percentage (%)"
-    )
-
-
-    ax.set_ylim(
-        0,
-        100
-    )
-
-
-    ax.legend()
-
-
-
-    ax.set_title(
-
-        "Figure 2: Evaluation Metrics Comparison",
-
-        fontsize=14,
-
-        fontweight="bold"
-
-    )
-
-
-    pdf.savefig(
-        fig,
-        dpi=300,
-        bbox_inches="tight"
-    )
-
-
-    plt.close()
-
-
-
-
-    # =================================================
-    # PAGE 4
-    # FEATURE IMPORTANCE
-    # =================================================
-
-
-    top_features = features.head(10)
-
-
-
-    fig,ax=plt.subplots(
-        figsize=(10,6)
-    )
-
-
-    ax.barh(
-
-        top_features["Feature"][::-1],
-
-        top_features["Importance (%)"][::-1]
-
-    )
-
-
-    ax.set_xlabel(
-        "Importance (%)"
-    )
-
-
-    ax.set_title(
-
-        "Figure 3: Most Influential KPI Factors Affecting Performance Prediction",
-
-        fontsize=14,
-
-        fontweight="bold"
-
-    )
-
-
-    pdf.savefig(
-        fig,
-        dpi=300,
-        bbox_inches="tight"
-    )
-
-
-    plt.close()
-
-
-
-
-    # =================================================
-    # PAGE 5
-    # FEATURE TABLE
-    # =================================================
-
-
-    fig,ax=plt.subplots(
-        figsize=(10,5)
-    )
-
-    ax.axis("off")
-
-
-    ft=top_features[
-        [
-            "Feature",
-            "Importance (%)"
-        ]
+    drop_columns = [
+        "Row_ID",
+        "Employee ID",
+        "Future_Performance_Score",
+        "Actual_Future_Band",
+        TARGET
     ]
 
+    X = df.drop(columns=[c for c in drop_columns if c in df.columns])
+    y = df[TARGET]
 
-    table=ax.table(
+    print("\nOriginal Features:")
+    print(X.columns.tolist())
 
-        cellText=ft.values,
+    # Load encoders
+    if ENCODER_FILE.exists():
+        encoders = joblib.load(ENCODER_FILE)
 
-        colLabels=ft.columns,
+        for col, encoder in encoders.items():
+            if col in X.columns:
+                X[col] = encoder.transform(X[col].astype(str))
 
-        loc="center"
+    # Fill missing values
+    X = X.fillna(X.median())
 
+    # Match training features
+    if FEATURE_FILE.exists():
+        feature_names = joblib.load(FEATURE_FILE)
+        X = X[feature_names]
+
+    print("\nFinal Features:")
+    print(X.columns.tolist())
+
+    return df, X, y
+
+
+# ======================================================
+# EVALUATION
+# ======================================================
+
+def evaluate(model, X, y):
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y,
+        test_size=0.2,
+        random_state=42,
+        stratify=y
     )
 
+    prediction = model.predict(X_test)
+    probability = model.predict_proba(X_test)
 
-    table.scale(
-        1,
-        2
-    )
+    metrics = {
+        "accuracy": accuracy_score(y_test, prediction),
+        "f1": f1_score(y_test, prediction, average="macro"),
+        "roc": roc_auc_score(y_test, probability, multi_class="ovr")
+    }
 
-
-    plt.title(
-
-        "Table 2: Ranking of Important Performance Factors",
-
-        fontsize=15,
-
-        fontweight="bold"
-
-    )
+    return X_test, y_test, prediction, probability, metrics
 
 
-    pdf.savefig(
-        fig,
-        dpi=300,
-        bbox_inches="tight"
-    )
+# ======================================================
+# FEATURE IMPORTANCE
+# ======================================================
+
+def get_feature_importance(model, X):
+
+    importance = pd.DataFrame({
+        "Feature": X.columns,
+        "Importance": model.feature_importances_
+    })
+
+    importance["Importance (%)"] = (importance["Importance"] * 100).round(2)
+
+    return importance.sort_values(
+        "Importance (%)",
+        ascending=False
+    ).head(10)
 
 
-    plt.close()
+# ======================================================
+# PDF REPORT
+# ======================================================
 
+def create_pdf(df, model, X, y, y_test, prediction, probability, metrics, importance):
 
+    with PdfPages(PDF_FILE) as pdf:
 
+        # ================= COVER PAGE =================
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.axis("off")
 
-    # =================================================
-    # PAGE 6
-    # PERFORMANCE DISTRIBUTION
-    # =================================================
+        ax.text(0.5, 0.7, "AI FUTURE PERFORMANCE REPORT",
+                fontsize=20, ha="center", weight="bold")
 
+        ax.text(0.5, 0.5,
+                f"Model: {type(model).__name__}\n"
+                f"Accuracy: {metrics['accuracy']:.2f}\n"
+                f"F1 Score: {metrics['f1']:.2f}\n"
+                f"ROC-AUC: {metrics['roc']:.2f}",
+                fontsize=12, ha="center")
 
-    counts=data[
-        "Performance_Category"
-    ].value_counts()
+        pdf.savefig(fig)
+        plt.close()
 
+        # ================= FEATURE IMPORTANCE =================
+        fig, ax = plt.subplots(figsize=(10, 6))
 
+        ax.barh(importance.Feature[::-1],
+                importance["Importance (%)"][::-1],
+                color="skyblue")
 
-    fig,ax=plt.subplots(
-        figsize=(8,5)
-    )
+        ax.set_title("Top 10 Important Features", fontsize=14)
+        ax.set_xlabel("Importance (%)")
+        ax.set_ylabel("Features")
 
+        for i, v in enumerate(importance["Importance (%)"][::-1]):
+            ax.text(v + 0.5, i, str(v), va='center')
 
-    bars=ax.bar(
+        pdf.savefig(fig)
+        plt.close()
 
-        counts.index.astype(str),
+        # ================= DISTRIBUTION =================
+        counts = df["Future_Performance_Category"].value_counts()
+        labels = [CATEGORY_NAMES[i] for i in counts.index]
 
-        counts.values
+        fig, ax = plt.subplots(figsize=(8, 5))
+        ax.bar(labels, counts.values, color=CATEGORY_COLORS)
 
-    )
+        ax.set_title("Employee Performance Distribution")
+        ax.set_xlabel("Performance Category")
+        ax.set_ylabel("Number of Employees")
 
+        pdf.savefig(fig)
+        plt.close()
 
-    ax.set_title(
+        # ================= CONFUSION MATRIX =================
+        cm = confusion_matrix(y_test, prediction)
 
-        "Figure 4: Employee Performance Category Distribution",
+        fig, ax = plt.subplots(figsize=(6, 5))
+        sns.heatmap(cm,
+                    annot=True,
+                    fmt="d",
+                    cmap="Blues",
+                    xticklabels=CATEGORY_NAMES.values(),
+                    yticklabels=CATEGORY_NAMES.values())
 
-        fontsize=14,
+        ax.set_title("Confusion Matrix")
+        ax.set_xlabel("Predicted")
+        ax.set_ylabel("Actual")
 
-        fontweight="bold"
+        pdf.savefig(fig)
+        plt.close()
 
-    )
+        # ================= ROC CURVE =================
+        fig, ax = plt.subplots(figsize=(8, 6))
 
+        for i in range(len(model.classes_)):
+            fpr, tpr, _ = roc_curve((y_test == i).astype(int), probability[:, i])
+            ax.plot(fpr, tpr, label=f"{CATEGORY_NAMES[i]}")
 
-    ax.set_ylabel(
-        "Number of Employees"
-    )
+        ax.plot([0, 1], [0, 1], linestyle="--", color="gray")
 
+        ax.set_title("ROC Curve")
+        ax.set_xlabel("False Positive Rate")
+        ax.set_ylabel("True Positive Rate")
+        ax.legend()
 
-    for b in bars:
+        pdf.savefig(fig)
+        plt.close()
 
-        ax.text(
-
-            b.get_x()+b.get_width()/2,
-
-            b.get_height()+5,
-
-            str(int(b.get_height())),
-
-            ha="center"
-
+        # ================= LEARNING CURVE =================
+        sizes, train, test = learning_curve(
+            model,
+            X,
+            y,
+            cv=5,
+            scoring="accuracy",
+            train_sizes=np.linspace(0.1, 1.0, 8),
+            n_jobs=-1
         )
 
+        fig, ax = plt.subplots(figsize=(8, 6))
 
+        ax.plot(sizes, train.mean(axis=1), 'o-', label="Training Score")
+        ax.plot(sizes, test.mean(axis=1), 'o-', label="Validation Score")
 
-    pdf.savefig(
-        fig,
-        dpi=300,
-        bbox_inches="tight"
-    )
+        ax.fill_between(sizes,
+                        train.mean(axis=1) - train.std(axis=1),
+                        train.mean(axis=1) + train.std(axis=1),
+                        alpha=0.1)
 
+        ax.fill_between(sizes,
+                        test.mean(axis=1) - test.std(axis=1),
+                        test.mean(axis=1) + test.std(axis=1),
+                        alpha=0.1)
 
-    plt.close()
+        ax.set_title("Learning Curve")
+        ax.set_xlabel("Training Size")
+        ax.set_ylabel("Accuracy")
+        ax.legend()
 
+        pdf.savefig(fig)
+        plt.close()
 
+        # ================= MODEL INTERPRETATION PAGE =================
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.axis("off")
 
+        interpretation = f"""
+MODEL INSIGHTS
 
-    # =================================================
-    # PAGE 7
-    # FINAL SUMMARY
-    # =================================================
+• Model Accuracy: {metrics['accuracy']:.2f}
+• Model F1 Score: {metrics['f1']:.2f}
 
-
-    best = comparison.sort_values(
-        "Accuracy",
-        ascending=False
-    ).iloc[0]
-
-
-
-    fig,ax=plt.subplots(
-        figsize=(8,6)
-    )
-
-
-    ax.axis("off")
-
-
-
-    summary=f"""
-
-AI EMPLOYEE PERFORMANCE PREDICTION MODEL
-
-Dataset:
-1000 Employee Records
-
-Input:
-18 Structured KPI Features
-
-Best Algorithm:
-{best['Algorithm']}
-
-Accuracy:
-{best['Accuracy']*100:.2f}%
-
-F1 Score:
-{best['F1 Score']*100:.2f}%
-
-ROC-AUC:
-{best['ROC-AUC']*100:.2f}%
-
-Cross Validation:
-{best['CV Mean']*100:.2f}%
-
-
-Most Influential Factors:
-
-1. {features.iloc[0]['Feature']}
-2. {features.iloc[1]['Feature']}
-3. {features.iloc[2]['Feature']}
 
 """
 
+        ax.text(0.05, 0.95, interpretation, va="top", fontsize=11)
 
-    ax.text(
+        pdf.savefig(fig)
+        plt.close()
+# ======================================================
+# MAIN
+# ======================================================
 
-        0.1,
-        0.8,
+def main():
 
-        summary,
+    print("Generating Report...")
 
-        fontsize=12,
+    model = load_model()
+    df, X, y = prepare_data()
 
-        verticalalignment="top"
+    X_test, y_test, prediction, probability, metrics = evaluate(model, X, y)
 
+    importance = get_feature_importance(model, X)
+
+    create_pdf(
+        df,
+        model,
+        X,
+        y,
+        y_test,
+        prediction,
+        probability,
+        metrics,
+        importance
     )
 
-
-    plt.title(
-
-        "Research Model Summary",
-
-        fontsize=16,
-
-        fontweight="bold"
-
-    )
+    print("PDF GENERATED SUCCESSFULLY")
 
 
-    pdf.savefig(
-        fig,
-        dpi=300,
-        bbox_inches="tight"
-    )
-
-
-    plt.close()
-
-
-
-
-print(
-"""
-=====================================
-
-THESIS STYLE PDF GENERATED
-
-File:
-
-results/Performance_Evaluation_Thesis_Report.pdf
-
-
-Pages:
-
-1. Model comparison table
-2. Accuracy comparison
-3. Evaluation metrics
-4. Feature importance chart
-5. Feature ranking table
-6. Performance distribution
-7. Research summary
-
-=====================================
-"""
-)
+if __name__ == "__main__":
+    main()
