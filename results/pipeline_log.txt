@@ -1,0 +1,11 @@
+2026-07-17 21:38:46.395996 : PIPELINE STARTED
+2026-07-17 21:38:51.362337 : preprocess.py completed in 4.97s
+2026-07-17 21:38:58.408187 : train.py completed in 7.05s
+2026-07-17 21:39:15.116121 : train_future_score_model.py completed in 16.71s
+2026-07-17 21:39:19.254386 : predict_future_performance.py completed in 4.14s
+2026-07-17 21:40:14.784198 : model_comparison.py completed in 55.53s
+2026-07-17 21:40:18.405543 : model_comparison_report.py completed in 3.62s
+2026-07-17 21:40:51.689089 : visualization.py completed in 33.28s
+2026-07-17 21:40:54.179089 : explain_prediction.py completed in 2.49s
+2026-07-17 21:46:07.229352 : future_performance_shap_explanation.py completed in 313.05s
+2026-07-17 21:46:07.230160 : PIPELINE COMPLETED 440.83s

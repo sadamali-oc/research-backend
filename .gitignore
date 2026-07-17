@@ -3,4 +3,12 @@ __pycache__/
 .env
 .xlsx
 *.pkl
-results
+
+
+# ML model files
+*.pkl
+*.joblib
+
+# Generated results
+results/*.png
+results/*.npy
