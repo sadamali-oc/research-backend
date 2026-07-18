@@ -1,13 +1,11 @@
-from backend.schemas.master_schema import *
-from backend.schemas.performance_schema import *
+from backend.schemas.employee_schema import *
+from backend.schemas.prediction_schema import *
 
 __all__ = [
-    # Master schemas
-    'EmployeeBase',
     'EmployeeResponse',
     'EmployeeListResponse',
     'EmployeeSearchResponse',
-    # Performance schemas
+    'EmployeeHistoryResponse',
     'PredictionRequest',
     'PredictionResponse',
     'PredictionHistoryResponse',

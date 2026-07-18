@@ -1,11 +1,13 @@
-from pydantic import BaseModel, field_validator
-from typing import Optional, List, Union
-from datetime import date, datetime
+from pydantic import BaseModel
+from typing import Optional, List
+from datetime import datetime
 
 class EmployeeBase(BaseModel):
     employee_id: str
+    period_year: Optional[int] = None
+    period_quarter: Optional[str] = None
     institution: Optional[str] = None
-    date_of_birth: Optional[datetime] = None
+    date_of_birth: Optional[str] = None
     gender: Optional[str] = None
     age_group: Optional[str] = None
     job_role: Optional[str] = None
@@ -20,9 +22,9 @@ class EmployeeBase(BaseModel):
     collaboration: Optional[int] = 0
     communication: Optional[int] = 0
     deadline_adherence_rate: Optional[float] = 0.0
-    adherence_level: Optional[Union[str, int]] = None  # Accept both
+    adherence_level: Optional[str] = None
     avg_response_time: Optional[float] = 0.0
-    response_time_level: Optional[Union[str, int]] = None  # Accept both
+    response_time_level: Optional[str] = None
     no_of_meetings_attended: Optional[int] = 0
     no_of_subordinates: Optional[int] = 0
     decision_contribution: Optional[int] = 0
@@ -32,12 +34,12 @@ class EmployeeBase(BaseModel):
     completed_storypoint_ratio: Optional[float] = 0.0
     completed_story_points: Optional[float] = 0.0
     assigned_story_points: Optional[float] = 0.0
-    project_id: Optional[Union[str, int]] = None  # Accept both
+    project_id: Optional[str] = None
     project_name: Optional[str] = None
     duration_weeks: Optional[float] = 0.0
     relative_effort: Optional[float] = 0.0
     team_size: Optional[int] = 0
-    project_complexity: Optional[Union[str, float]] = None  # Accept both
+    project_complexity: Optional[str] = None
     rework_count: Optional[int] = 0
     no_pay_leave: Optional[int] = 0
     blockers: Optional[int] = 0
@@ -56,47 +58,6 @@ class EmployeeBase(BaseModel):
     metric_7_name: Optional[str] = None
     metric_7_value: Optional[float] = 0.0
 
-    @field_validator('adherence_level', mode='before')
-    def validate_adherence_level(cls, v):
-        if v is None:
-            return None
-        # Map integer values to strings
-        if isinstance(v, int):
-            mapping = {1: 'Low', 2: 'Medium', 3: 'High', 4: 'Medium', 5: 'High'}
-            return mapping.get(v, str(v))
-        return v
-
-    @field_validator('response_time_level', mode='before')
-    def validate_response_time_level(cls, v):
-        if v is None:
-            return None
-        if isinstance(v, int):
-            mapping = {1: 'Low', 2: 'Medium', 3: 'High', 4: 'Medium', 5: 'High'}
-            return mapping.get(v, str(v))
-        return v
-
-    @field_validator('project_complexity', mode='before')
-    def validate_project_complexity(cls, v):
-        if v is None:
-            return None
-        if isinstance(v, float):
-            # Map float to string
-            if v <= 2.0:
-                return 'Low'
-            elif v <= 5.0:
-                return 'Medium'
-            elif v <= 8.0:
-                return 'High'
-            else:
-                return 'Very High'
-        return v
-
-    @field_validator('project_id', mode='before')
-    def validate_project_id(cls, v):
-        if v is None:
-            return None
-        return str(v)
-
 class EmployeeResponse(EmployeeBase):
     class Config:
         from_attributes = True
@@ -110,3 +71,16 @@ class EmployeeSearchResponse(BaseModel):
     name: str
     job_role: str
     department: str
+
+class EmployeeHistoryResponse(BaseModel):
+    period: str
+    year: int
+    quarter: str
+    score: float
+    band: str
+    deadline_adherence: float
+    punctuality: int
+    problem_solving: int
+    leadership: int
+    collaboration: int
+    communication: int

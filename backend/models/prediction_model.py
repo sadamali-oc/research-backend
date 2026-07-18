@@ -1,18 +1,35 @@
-from sqlalchemy import Column, String, Integer, Float, DateTime, JSON, ForeignKey
+from sqlalchemy import Column, String, Integer, Float, DateTime
 from datetime import datetime
 from backend.database.database import Base
 
-class PerformanceResult(Base):
-    __tablename__ = "performance_results"
+class PerformancePrediction(Base):
+    __tablename__ = 'performance_predictions'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     employee_id = Column(String(50), nullable=False, index=True)
-    performance_score = Column(Float, nullable=False)
-    performance_band = Column(String(20), nullable=False)  # High / Medium / Low
-    confidence = Column(Float, nullable=True)
-    feature_snapshot = Column(JSON, nullable=True)  # Store feature importance
-    model_version = Column(String(50), nullable=True)
+    period_year = Column(Integer, nullable=False)
+    period_quarter = Column(String(2), nullable=False)
+
+    predicted_score = Column(Float, nullable=False)
+    predicted_band = Column(String(20), nullable=False)
+    confidence = Column(Float, nullable=False)
+
+    rf_score = Column(Float)
+    rf_band = Column(String(20))
+    rf_confidence = Column(Float)
+    gb_score = Column(Float)
+    gb_band = Column(String(20))
+    gb_confidence = Column(Float)
+
+    algorithm_used = Column(String(50), nullable=False)
+    model_version = Column(String(50))
+    feature_importance = Column(String(500))  # JSON string
+
+    actual_score = Column(Float)
+    actual_band = Column(String(20))
+
     predicted_at = Column(DateTime, default=datetime.utcnow)
+    evaluated_at = Column(DateTime)
 
     def __repr__(self):
-        return f"<PerformanceResult {self.employee_id}: {self.performance_band} ({self.performance_score:.2f})>"
+        return f"<Prediction {self.employee_id} {self.period_year}{self.period_quarter}: {self.predicted_band}>"

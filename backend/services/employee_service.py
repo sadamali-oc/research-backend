@@ -1,8 +1,13 @@
 from sqlalchemy.orm import Session
-from typing import List, Optional, Tuple
-from backend.models.employee_model import EmployeePerformanceView
+from sqlalchemy import func, distinct
+from typing import List, Optional, Tuple, Dict
+from datetime import datetime
 
-class MasterService:
+from backend.models.employee_model import EmployeePerformanceView
+from backend.models.history_model import PerformanceHistory
+from backend.schemas.employee_schema import EmployeeHistoryResponse
+
+class EmployeeService:
     def __init__(self, db_session: Session):
         self.db = db_session
 
@@ -13,21 +18,16 @@ class MasterService:
             total = query.count()
             employees = query.offset(skip).limit(limit).all()
 
-            # Convert to list of dicts
             result = []
             for emp in employees:
                 result.append({
                     'employee_id': emp.employee_id,
+                    'period_year': emp.period_year,
+                    'period_quarter': emp.period_quarter,
                     'institution': emp.institution,
-                    'date_of_birth': emp.date_of_birth,
-                    'gender': emp.gender,
-                    'age_group': emp.age_group,
                     'job_role': emp.job_role,
                     'years_of_experience': emp.years_of_experience,
                     'department': emp.department,
-                    'language_proficiency': emp.language_proficiency,
-                    'ethnicity': emp.ethnicity,
-                    'educational_institute': emp.educational_institute,
                     'punctuality': emp.punctuality,
                     'problem_solving': emp.problem_solving,
                     'leadership': emp.leadership,
@@ -79,58 +79,26 @@ class MasterService:
     def get_employee_by_id(self, employee_id: str) -> Optional[dict]:
         """Get employee by ID"""
         try:
-            employee = self.db.query(EmployeePerformanceView).filter_by(
+            emp = self.db.query(EmployeePerformanceView).filter_by(
                 employee_id=employee_id
             ).first()
 
-            if employee:
+            if emp:
                 return {
-                    'employee_id': employee.employee_id,
-                    'institution': employee.institution,
-                    'job_role': employee.job_role,
-                    'department': employee.department,
-                    'years_of_experience': employee.years_of_experience,
-                    'punctuality': employee.punctuality,
-                    'problem_solving': employee.problem_solving,
-                    'leadership': employee.leadership,
-                    'collaboration': employee.collaboration,
-                    'communication': employee.communication,
-                    'deadline_adherence_rate': employee.deadline_adherence_rate,
-                    'adherence_level': employee.adherence_level,
-                    'avg_response_time': employee.avg_response_time,
-                    'response_time_level': employee.response_time_level,
-                    'no_of_meetings_attended': employee.no_of_meetings_attended,
-                    'no_of_subordinates': employee.no_of_subordinates,
-                    'decision_contribution': employee.decision_contribution,
-                    'learning_hours_per_month': employee.learning_hours_per_month,
-                    'type_of_learning': employee.type_of_learning,
-                    'team_engagement_frequency': employee.team_engagement_frequency,
-                    'completed_storypoint_ratio': employee.completed_storypoint_ratio,
-                    'completed_story_points': employee.completed_story_points,
-                    'assigned_story_points': employee.assigned_story_points,
-                    'project_id': employee.project_id,
-                    'project_name': employee.project_name,
-                    'duration_weeks': employee.duration_weeks,
-                    'relative_effort': employee.relative_effort,
-                    'team_size': employee.team_size,
-                    'project_complexity': employee.project_complexity,
-                    'rework_count': employee.rework_count,
-                    'no_pay_leave': employee.no_pay_leave,
-                    'blockers': employee.blockers,
-                    'metric_1_name': employee.metric_1_name,
-                    'metric_1_value': employee.metric_1_value,
-                    'metric_2_name': employee.metric_2_name,
-                    'metric_2_value': employee.metric_2_value,
-                    'metric_3_name': employee.metric_3_name,
-                    'metric_3_value': employee.metric_3_value,
-                    'metric_4_name': employee.metric_4_name,
-                    'metric_4_value': employee.metric_4_value,
-                    'metric_5_name': employee.metric_5_name,
-                    'metric_5_value': employee.metric_5_value,
-                    'metric_6_name': employee.metric_6_name,
-                    'metric_6_value': employee.metric_6_value,
-                    'metric_7_name': employee.metric_7_name,
-                    'metric_7_value': employee.metric_7_value
+                    'employee_id': emp.employee_id,
+                    'period_year': emp.period_year,
+                    'period_quarter': emp.period_quarter,
+                    'job_role': emp.job_role,
+                    'department': emp.department,
+                    'years_of_experience': emp.years_of_experience,
+                    'punctuality': emp.punctuality,
+                    'problem_solving': emp.problem_solving,
+                    'leadership': emp.leadership,
+                    'collaboration': emp.collaboration,
+                    'communication': emp.communication,
+                    'deadline_adherence_rate': emp.deadline_adherence_rate,
+                    'avg_response_time': emp.avg_response_time,
+                    'completed_storypoint_ratio': emp.completed_storypoint_ratio
                 }
             return None
         except Exception as e:
@@ -154,18 +122,66 @@ class MasterService:
             print(f"Error in search_employees: {e}")
             return []
 
-    def get_employees_by_department(self, department: str) -> List[dict]:
-        """Get employees by department"""
+    def get_employee_history(self, employee_id: str) -> List[dict]:
+        """Get historical performance data for an employee"""
         try:
-            employees = self.db.query(EmployeePerformanceView).filter_by(
-                department=department
+            records = self.db.query(PerformanceHistory).filter_by(
+                employee_id=employee_id
+            ).order_by(
+                PerformanceHistory.period_year,
+                PerformanceHistory.period_quarter
             ).all()
 
-            return [{
-                'employee_id': e.employee_id,
-                'job_role': e.job_role,
-                'department': e.department
-            } for e in employees]
+            history = []
+            for r in records:
+                score = (
+                        r.deadline_adherence_rate * 0.25 +
+                        r.completed_storypoint_ratio * 100 * 0.25 +
+                        r.punctuality * 5 * 0.10 +
+                        r.problem_solving * 5 * 0.10 +
+                        r.leadership * 5 * 0.10 +
+                        r.collaboration * 5 * 0.10 +
+                        r.communication * 5 * 0.10
+                )
+
+                history.append({
+                    'period': f"{r.period_year} {r.period_quarter}",
+                    'year': r.period_year,
+                    'quarter': r.period_quarter,
+                    'score': round(score, 2),
+                    'band': 'High' if score >= 70 else 'Medium' if score >= 40 else 'Low',
+                    'deadline_adherence': r.deadline_adherence_rate,
+                    'punctuality': r.punctuality,
+                    'problem_solving': r.problem_solving,
+                    'leadership': r.leadership,
+                    'collaboration': r.collaboration,
+                    'communication': r.communication
+                })
+
+            return history
         except Exception as e:
-            print(f"Error in get_employees_by_department: {e}")
+            print(f"Error in get_employee_history: {e}")
             return []
+
+    def get_quarters_info(self) -> dict:
+        """Get information about available quarters"""
+        try:
+            # Get distinct quarters
+            quarters = self.db.query(
+                PerformanceHistory.period_year,
+                PerformanceHistory.period_quarter
+            ).distinct().order_by(
+                PerformanceHistory.period_year,
+                PerformanceHistory.period_quarter
+            ).all()
+
+            total_quarters = len(quarters)
+
+            return {
+                'total_quarters': total_quarters,
+                'quarters': [f"{q.period_year} {q.period_quarter}" for q in quarters],
+                'years': list(set(q.period_year for q in quarters))
+            }
+        except Exception as e:
+            print(f"Error in get_quarters_info: {e}")
+            return {'total_quarters': 0, 'quarters': [], 'years': []}

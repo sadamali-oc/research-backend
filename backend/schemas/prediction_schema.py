@@ -1,5 +1,5 @@
-from pydantic import BaseModel, field_validator
-from typing import Optional, List, Dict, Union, Tuple
+from pydantic import BaseModel
+from typing import Optional, List, Dict
 from datetime import datetime
 
 class PredictionRequest(BaseModel):
@@ -11,8 +11,8 @@ class FeatureImportance(BaseModel):
 
 class PredictionResponse(BaseModel):
     employee_id: str
-    performance_band: str
-    performance_score: float
+    predicted_band: str
+    predicted_score: float
     confidence: float
     next_quarter: str
     rf_prediction: Optional[str] = None
@@ -23,12 +23,17 @@ class PredictionResponse(BaseModel):
 
 class PredictionHistoryResponse(BaseModel):
     employee_id: str
-    performance_band: str
-    performance_score: float
+    period: str
+    year: int
+    quarter: str
+    predicted_band: str
+    predicted_score: float
     confidence: float
+    algorithm: str
+    actual_score: Optional[float] = None
+    actual_band: Optional[str] = None
     predicted_at: datetime
-    period_year: int
-    period_quarter: str
+    # Remove 'evaluated' field - it's not in the data
 
 class PredictionStatsResponse(BaseModel):
     total_predictions: int
@@ -45,28 +50,5 @@ class TrainModelResponse(BaseModel):
     accuracy: Optional[float] = None
     f1_score: Optional[float] = None
     top_features: Optional[List[FeatureImportance]] = None
-
-class EmployeeHistoryResponse(BaseModel):
-    period: str
-    year: int
-    quarter: str
-    score: float
-    band: str
-    deadline_adherence: float
-    punctuality: int
-    problem_solving: int
-    leadership: int
-    collaboration: int
-    communication: int
-
-class EmployeePredictionHistoryResponse(BaseModel):
-    period: str
-    year: int
-    quarter: str
-    predicted_band: str
-    predicted_score: float
-    confidence: float
-    algorithm: str
-    actual_score: Optional[float] = None
-    actual_band: Optional[str] = None
-    evaluated: bool
+    predictions_count: Optional[int] = None
+    stats: Optional[PredictionStatsResponse] = None

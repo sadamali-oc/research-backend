@@ -5,7 +5,8 @@ import uvicorn
 from contextlib import asynccontextmanager
 
 from backend.database.database import init_db
-from backend.api.routes import employees_router, predictions_router
+from backend.api.routes.employee_router import router as employee_router
+from backend.api.routes.prediction_router import router as prediction_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -21,14 +22,14 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Employee Performance Appraisal API",
     description="AI-based employee performance appraisal system",
-    version="1.0.0",
+    version="2.0.0",
     lifespan=lifespan
 )
 
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For development - restrict in production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -47,7 +48,7 @@ async def health_check():
 async def root():
     return {
         "message": "Employee Performance Appraisal API",
-        "version": "1.0.0",
+        "version": "2.0.0",
         "endpoints": {
             "employees": "/api/employees",
             "predictions": "/api/predictions",
@@ -55,9 +56,9 @@ async def root():
         }
     }
 
-# Include routers
-app.include_router(employees_router)
-app.include_router(predictions_router)
+# Include routers - make sure they are the router objects
+app.include_router(employee_router)
+app.include_router(prediction_router)
 
 if __name__ == "__main__":
     uvicorn.run(
