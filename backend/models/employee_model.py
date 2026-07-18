@@ -73,6 +73,8 @@ class EmployeePerformanceView(Base):
 
     # Use employee_id as primary key since it's unique
     employee_id = Column(String(50), primary_key=True, index=True)
+    period_year = Column(Integer, nullable=True)
+    period_quarter = Column(String(2), nullable=True)  # Q1, Q2, Q3, Q4
 
     institution = Column(String(100))
     date_of_birth = Column(DateTime)
@@ -135,6 +137,7 @@ class EmployeePerformanceView(Base):
     metric_6_value = Column(Float)
     metric_7_name = Column(String(100))
     metric_7_value = Column(Float)
+
 
     def __repr__(self):
         return f"<EmployeePerformanceView {self.employee_id}>"

@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from typing import List, Optional, Tuple
-from backend.models.master import EmployeePerformanceView
+from backend.models.employee_model import EmployeePerformanceView
 
 class MasterService:
     def __init__(self, db_session: Session):
