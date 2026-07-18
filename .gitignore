@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Environment
+.venv
+
+# Logs
+*.log
