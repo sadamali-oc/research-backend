@@ -1,3 +1,4 @@
+# backend/main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -7,6 +8,7 @@ from contextlib import asynccontextmanager
 from backend.database.database import init_db
 from backend.api.routes.employee_router import router as employee_router
 from backend.api.routes.prediction_router import router as prediction_router
+from backend.api.routes.feedback_router import router as feedback_router  # ✅ Already imported
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -52,13 +54,15 @@ async def root():
         "endpoints": {
             "employees": "/api/employees",
             "predictions": "/api/predictions",
+            "feedback": "/api/feedback",  # ✅ Added feedback endpoint
             "docs": "/docs"
         }
     }
 
-# Include routers - make sure they are the router objects
+# Include routers
 app.include_router(employee_router)
 app.include_router(prediction_router)
+app.include_router(feedback_router)  # ✅ Already registered
 
 if __name__ == "__main__":
     uvicorn.run(

@@ -1,3 +1,4 @@
+# frontend/app.py
 import streamlit as st
 import requests
 
@@ -71,6 +72,9 @@ with st.sidebar:
     if st.button("🎯 Performance Prediction", use_container_width=True):
         navigate_to('performance')
 
+    if st.button("📊 360 Feedback", use_container_width=True):
+        navigate_to('feedback_preprocess')
+
     st.markdown("---")
     st.caption(f"Current Page: {st.session_state.page}")
     st.caption("Version: 2.0.0")
@@ -84,6 +88,9 @@ if page == 'dashboard':
 elif page == 'performance':
     from pages.performance import main as performance_page
     performance_page()
+elif page == 'feedback_preprocess':
+    from pages.feedback_preprocess import main as feedback_page
+    feedback_page()
 else:
     from pages.dashboard import main as dashboard_page
     dashboard_page()
