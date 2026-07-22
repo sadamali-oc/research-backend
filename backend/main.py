@@ -9,6 +9,7 @@ from backend.database.database import init_db
 from backend.api.routes.employee_router import router as employee_router
 from backend.api.routes.prediction_router import router as prediction_router
 from backend.api.routes.feedback_router import router as feedback_router  # ✅ Already imported
+from backend.api.routes.culture_router import router as culture_router  # ✅ Already imported
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -63,6 +64,7 @@ async def root():
 app.include_router(employee_router)
 app.include_router(prediction_router)
 app.include_router(feedback_router)  # ✅ Already registered
+app.include_router(culture_router)  # ✅ Already registered
 
 if __name__ == "__main__":
     uvicorn.run(

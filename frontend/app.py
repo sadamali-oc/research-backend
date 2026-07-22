@@ -91,6 +91,9 @@ elif page == 'performance':
 elif page == 'feedback_preprocess':
     from pages.feedback_preprocess import main as feedback_page
     feedback_page()
+elif page == 'culture_clustering':
+    from pages.culture_clustering import main as culture_page
+    culture_page()
 else:
     from pages.dashboard import main as dashboard_page
     dashboard_page()

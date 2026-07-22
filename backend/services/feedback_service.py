@@ -11,7 +11,13 @@ from backend.models.feedback_model import Feedback360, AggregatedPerformance
 from backend.schemas.feedback_schema import AggregatedPerformanceBase
 
 logger = logging.getLogger(__name__)
-
+JOB_ROLE_TO_LEVEL = {
+    'Project Manager': 4,
+    'Business Analyst': 3,
+    'Software Engineer': 3,
+    'DevOps Engineer': 2,
+    'QA Engineer': 2,
+}
 class FeedbackService:
     """Service for 360-degree feedback data processing with hierarchy distance awareness"""
 
@@ -136,39 +142,29 @@ class FeedbackService:
         return evaluator_level - evaluatee_level
 
     def update_hierarchy_distances(self, institution_id: Optional[str] = None) -> Dict:
-        """
-        Update hierarchy_distance for all feedback records based on role mapping
-        """
-        logger.info("Updating hierarchy distances...")
+        from backend.models.employee_model import EmployeePerformanceView
+        from backend.services.id_utils import normalize_employee_id
+        role_rows = self.db.query(
+            EmployeePerformanceView.employee_id,
+            EmployeePerformanceView.job_role
+        ).all()
+        role_map = {emp_id: JOB_ROLE_TO_LEVEL.get(job_role, 2) for emp_id, job_role in role_rows}
 
-        # Get all feedback records
         query = self.db.query(Feedback360)
         if institution_id:
             query = query.filter(Feedback360.institution_id == institution_id)
-
         records = query.all()
+
         updated_count = 0
-
         for record in records:
-            # Extract role from evaluator_id (assuming format like E001, PM001, etc.)
-            # This is a simplified example - you'd need actual role data
-            # In practice, you'd join with employee table to get roles
-            evaluator_role = self._extract_role(record.evaluator_id)
-            evaluatee_role = self._extract_role(record.evaluatee_id)
-
-            hierarchy_distance = self.calculate_hierarchy_distance(evaluator_role, evaluatee_role)
-
-            if record.hierarchy_distance != hierarchy_distance:
-                record.hierarchy_distance = hierarchy_distance
+            evaluator_level = role_map.get(record.evaluator_id, 2)
+            evaluatee_level = role_map.get(record.evaluatee_id, 2)
+            hd = evaluator_level - evaluatee_level
+            if record.hierarchy_distance != hd:
+                record.hierarchy_distance = hd
                 updated_count += 1
-
         self.db.commit()
-        logger.info(f"Updated hierarchy distances for {updated_count} records")
-
-        return {
-            "total_records": len(records),
-            "updated": updated_count
-        }
+        return {"total_records": len(records), "updated": updated_count}
 
     def _extract_role(self, employee_id: str) -> str:
         """
