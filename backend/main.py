@@ -1,15 +1,22 @@
 # backend/main.py
+from dotenv import load_dotenv
+load_dotenv()
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
 from contextlib import asynccontextmanager
 
+
 from backend.database.database import init_db
 from backend.api.routes.employee_router import router as employee_router
 from backend.api.routes.prediction_router import router as prediction_router
 from backend.api.routes.feedback_router import router as feedback_router  # ✅ Already imported
 from backend.api.routes.culture_router import router as culture_router  # ✅ Already imported
+from backend.api.routes.diplomat_router import router as diplomat_router # ✅ Already imported
+from backend.api.routes.pdi_risk_router import router as pdi_risk_router # ✅ Already imported
+from backend.api.routes.llm_diplomat_router import router as llm_diplomat_router # ✅ Already imported
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -65,7 +72,9 @@ app.include_router(employee_router)
 app.include_router(prediction_router)
 app.include_router(feedback_router)  # ✅ Already registered
 app.include_router(culture_router)  # ✅ Already registered
-
+app.include_router(diplomat_router)  # ✅ Already registered
+app.include_router(pdi_risk_router)  # ✅ Already registered
+app.include_router(llm_diplomat_router)  # ✅ Already registered
 if __name__ == "__main__":
     uvicorn.run(
         "backend.main:app",

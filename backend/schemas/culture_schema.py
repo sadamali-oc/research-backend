@@ -36,6 +36,14 @@ class OpinionDynamicsProfileItem(BaseModel):
     pct_high_divergence: Optional[float] = None
 
 
+class HaloProfileItem(BaseModel):
+    cluster_id: int
+    n: int
+    mean_ability_composite: float
+    mean_performance_score_norm: float
+    mean_halo_gap: float
+
+
 class AlignmentSignificance(BaseModel):
     chi2: Optional[float] = None
     dof: Optional[int] = None
@@ -51,6 +59,13 @@ class OpinionDynamicsSignificance(BaseModel):
     test: str = "kruskal-wallis"
 
 
+class HaloSignificance(BaseModel):
+    h_statistic: Optional[float] = None
+    p_value: float
+    significant: bool
+    test: str = "kruskal-wallis"
+
+
 class ClusterRunResponse(BaseModel):
     status: str
     n_employees: Optional[int] = None
@@ -60,5 +75,7 @@ class ClusterRunResponse(BaseModel):
     alignment_significance: Optional[AlignmentSignificance] = None
     opinion_dynamics_profile: Optional[List[OpinionDynamicsProfileItem]] = None
     opinion_dynamics_significance: Optional[OpinionDynamicsSignificance] = None
+    halo_profile: Optional[List[HaloProfileItem]] = None
+    halo_significance: Optional[HaloSignificance] = None
     employees: Optional[List[Dict[str, Any]]] = None
     message: Optional[str] = None

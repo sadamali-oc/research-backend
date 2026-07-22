@@ -219,6 +219,51 @@ class CultureClusterService:
                 'mean_years_experience': round(float(group['years_of_experience'].mean()), 1)
             })
         return profile
+    def _attach_performance_score(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Pulls in the holistic performance_score (which DOES include collaboration/
+        communication) purely as a secondary descriptive comparison against
+        ability_composite (which deliberately excludes them). Never used for the
+        Proposition-2 alignment test — that stays on ability_composite vs
+        relational_score to avoid the overlap problem. This is a separate,
+        additional lens: does a cluster's holistic rating exceed what its pure
+        task ability would predict?
+        """
+        rows = self.db.query(AggregatedPerformance).filter(
+            AggregatedPerformance.employee_id.in_(df['employee_id'].tolist())
+        ).all()
+        perf_df = pd.DataFrame([{
+            'employee_id': r.employee_id,
+            'performance_score': r.performance_score
+        } for r in rows]).groupby('employee_id', as_index=False).mean(numeric_only=True)
+
+        df = df.merge(perf_df, on='employee_id', how='left')
+        df['performance_score_norm'] = (df['performance_score'] - 1) / 4.0  # 1-5 -> 0-1, same scale as ability_composite
+        df['halo_gap'] = df['performance_score_norm'] - df['ability_composite']
+        return df
+
+    def cluster_halo_profile(self, df: pd.DataFrame) -> List[Dict]:
+        """
+        Positive halo_gap = cluster's holistic rating exceeds what task-only ability
+        predicts (relational 'halo' boost). Negative = under-rated relative to skill.
+        """
+        profile = []
+        for cluster_id, group in df.groupby('cluster_id'):
+            profile.append({
+                'cluster_id': int(cluster_id),
+                'n': int(len(group)),
+                'mean_ability_composite': round(float(group['ability_composite'].mean()), 3),
+                'mean_performance_score_norm': round(float(group['performance_score_norm'].mean()), 3),
+                'mean_halo_gap': round(float(group['halo_gap'].mean()), 3)
+            })
+        return profile
+
+    def halo_gap_significance(self, df: pd.DataFrame) -> Dict:
+        """Kruskal-Wallis: does the halo effect itself differ significantly by cluster?"""
+        groups = [g['halo_gap'].dropna().values for _, g in df.groupby('cluster_id')]
+        groups = [g for g in groups if len(g) > 0]
+        stat, p_value = kruskal(*groups)
+        return {'h_statistic': float(stat), 'p_value': float(p_value), 'significant': bool(p_value < 0.05)}
 
     # ---------- Orchestration ----------
     def run(self, institution_id: Optional[str] = None) -> Dict:
@@ -230,6 +275,7 @@ class CultureClusterService:
         df = df.merge(ability_df, on='employee_id', how='left')
         df = self.compute_alignment(df)
         df = self._attach_divergence(df)
+        df = self._attach_performance_score(df)
 
         return {
             'status': 'success',
@@ -240,5 +286,7 @@ class CultureClusterService:
             'alignment_significance': self.alignment_significance_test(df),
             'opinion_dynamics_profile': self.cluster_opinion_dynamics_profile(df),
             'opinion_dynamics_significance': self.divergence_by_cluster_significance(df),
+            'halo_profile': self.cluster_halo_profile(df),                      # <-- new
+            'halo_significance': self.halo_gap_significance(df),
             'employees': df.to_dict('records')
         }

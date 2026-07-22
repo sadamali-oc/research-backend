@@ -23,7 +23,9 @@ async def run_clustering(request: ClusterRunRequest, db: Session = Depends(get_d
         alignment_summary=result['alignment_summary'],
         alignment_significance=result['alignment_significance'],
         opinion_dynamics_profile=result['opinion_dynamics_profile'],
-        opinion_dynamics_significance=result['opinion_dynamics_significance']
+        opinion_dynamics_significance=result['opinion_dynamics_significance'],
+        halo_profile=result['halo_profile'],
+        halo_significance=result['halo_significance']
     )
     if request.include_employees:
         response.employees = [
@@ -36,6 +38,8 @@ async def run_clustering(request: ClusterRunRequest, db: Session = Depends(get_d
                 'ability_rank': e.get('ability_rank'),
                 'relational_rank': e.get('relational_rank'),
                 'aligned': e.get('aligned'),
+                'performance_score_norm': e.get('performance_score_norm'),
+                'halo_gap': e.get('halo_gap'),
                 'gender': e.get('gender'),
                 'age_group': e.get('age_group'),
                 'department': e.get('department'),
