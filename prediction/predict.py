@@ -1,3 +1,4 @@
+import logging
 import joblib
 import pandas as pd
 import numpy as np
@@ -7,11 +8,26 @@ from pathlib import Path
 
 
 # ======================================================
+# LOGGING SETUP
+# ======================================================
+
+logging.getLogger("fontTools").setLevel(logging.ERROR)
+logging.getLogger("matplotlib").setLevel(logging.WARNING)
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)-7s | %(message)s",
+    datefmt="%H:%M:%S",
+)
+
+logger = logging.getLogger("employee_prediction")
+
+
+# ======================================================
 # CONFIGURATION
 # ======================================================
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 DATA_FILE = (
     BASE_DIR /
@@ -19,18 +35,9 @@ DATA_FILE = (
     "performance_future_features.xlsx"
 )
 
+MODEL_FOLDER = BASE_DIR / "models"
 
-MODEL_FOLDER = (
-    BASE_DIR /
-    "models"
-)
-
-
-RESULT_FOLDER = (
-    BASE_DIR /
-    "results"
-)
-
+RESULT_FOLDER = BASE_DIR / "results"
 RESULT_FOLDER.mkdir(exist_ok=True)
 
 
@@ -38,7 +45,6 @@ REGRESSOR_FILE = (
     MODEL_FOLDER /
     "random_forest_regressor.pkl"
 )
-
 
 CLASSIFIER_FILE = (
     MODEL_FOLDER /
@@ -69,6 +75,15 @@ NEXT_QUARTER = {
 }
 
 
+BAND_MAPPING = {
+
+    0: "Low",
+    1: "Medium",
+    2: "High"
+
+}
+
+
 
 # ======================================================
 # LOAD MODELS
@@ -76,13 +91,13 @@ NEXT_QUARTER = {
 
 def load_models():
 
-    print("\nLoading models...")
-
+    logger.info(
+        "Loading models..."
+    )
 
     regressor = joblib.load(
         REGRESSOR_FILE
     )
-
 
     classifier = joblib.load(
         CLASSIFIER_FILE
@@ -93,14 +108,15 @@ def load_models():
 
 
 
-
 # ======================================================
 # LOAD DATA
 # ======================================================
 
 def load_data():
 
-    print("\nLoading employee data...")
+    logger.info(
+        "Loading employee data..."
+    )
 
 
     df = pd.read_excel(
@@ -108,8 +124,8 @@ def load_data():
     )
 
 
-    print(
-        "Dataset:",
+    logger.info(
+        "Dataset shape: %s",
         df.shape
     )
 
@@ -118,40 +134,32 @@ def load_data():
 
 
 
-
 # ======================================================
-# GET LATEST QUARTER
+# GET LATEST RECORD
 # ======================================================
 
 def get_latest_quarter_per_employee(df):
 
-
     df = df.sort_values(
-
         [
             "Employee ID",
             "Period Year",
             "Period Quarter"
-
         ]
-
     )
 
 
     latest = (
-
         df.groupby(
             "Employee ID",
             as_index=False
         )
         .tail(1)
         .copy()
-
     )
 
 
     return latest
-
 
 
 
@@ -161,43 +169,32 @@ def get_latest_quarter_per_employee(df):
 
 def compute_predicted_period(row):
 
-
     year = int(
         row["Period Year"]
     )
 
-
-    quarter = (
-        row["Period Quarter"]
-    )
+    quarter = row["Period Quarter"]
 
 
     if quarter == "Q4":
 
-        return (
-            f"{year+1}-Q1"
-        )
+        return f"{year + 1}-Q1"
 
 
     return (
-
-        f"{year}-"
-        f"{NEXT_QUARTER[quarter]}"
-
+        f"{year}-{NEXT_QUARTER[quarter]}"
     )
 
 
 
-
 # ======================================================
-# RECOMMENDATIONS
+# RECOMMENDATION GENERATION
 # ======================================================
 
 def generate_recommendation(
-        factor,
+        factors,
         band
 ):
-
 
     if band == "High":
 
@@ -209,76 +206,78 @@ def generate_recommendation(
 
     recommendations = {
 
-
         "Task_Completion_Rate":
-
-        "Improve task planning and completion efficiency.",
-
+            "Improve task planning and completion efficiency.",
 
 
         "On_Time_Delivery_Rate":
-
-        "Improve deadline management and delivery consistency.",
-
+            "Improve deadline management and delivery consistency.",
 
 
         "Bug_Resolution_Rate":
-
-        "Focus on faster bug identification and resolution.",
-
+            "Focus on faster bug identification and resolution.",
 
 
         "Code_Quality_Score":
-
-        "Improve coding standards and perform regular code reviews.",
-
+            "Improve coding standards and perform regular code reviews.",
 
 
         "System_Reliability":
-
-        "Reduce system issues and improve reliability.",
-
+            "Reduce system issues and improve reliability.",
 
 
         "Sprint_Velocity_Raw":
-
-        "Improve sprint productivity and workload management.",
-
+            "Improve sprint productivity and workload management.",
 
 
         "Rework_Score":
-
-        "Reduce repeated work through better quality checking."
+            "Reduce repeated work through better quality checking."
 
     }
 
 
+    factor_list = factors.split(", ")
 
-    return recommendations.get(
 
-        factor,
+    suggestions = []
 
-        "Monitor performance and improve identified areas."
 
+    for factor in factor_list:
+
+        if factor in recommendations:
+
+            suggestions.append(
+                recommendations[factor]
+            )
+
+
+    if suggestions:
+
+        return " ".join(
+            suggestions[:2]
+        )
+
+
+    return (
+        "Monitor performance and improve "
+        "identified influencing factors."
     )
 
-
-
-
-
 # ======================================================
-# SHAP EXPLANATION
+# SHAP TOP 5 FEATURE EXPLANATION
 # ======================================================
 
 def get_influential_factors(
         model,
         X,
         features,
-        predictions
+        predictions,
+        top_n=5
 ):
 
-
-    print("\nGenerating explanations...")
+    logger.info(
+        "Generating SHAP explanations..."
+    )
 
 
     explainer = shap.TreeExplainer(
@@ -286,135 +285,192 @@ def get_influential_factors(
     )
 
 
-    shap_values = (
-        explainer.shap_values(X)
+    shap_values = explainer.shap_values(
+        X
     )
 
 
-    print(
-        "SHAP generated"
-    )
+    n_samples = len(X)
 
-
-    factors = []
+    n_features = len(features)
 
 
 
-    # Multi-class Random Forest handling
+    # ==================================================
+    # HANDLE DIFFERENT SHAP OUTPUT FORMATS
+    # ==================================================
 
-    if isinstance(
-        shap_values,
-        list
-    ):
+    if isinstance(shap_values, list):
 
+        # Older SHAP versions
+        # Shape:
+        # (number_of_classes, samples, features)
 
-        shap_values = np.array(
+        stacked = np.array(
             shap_values
         )
 
 
-        # Select predicted class explanation
+        per_sample_values = np.array(
+            [
+                stacked[
+                    predictions[i],
+                    i,
+                    :
+                ]
 
-        final_values = []
-
-
-        for i in range(len(X)):
-
-
-            class_index = predictions[i]
-
-
-            values = shap_values[
-
-                class_index,
-
-                i
-
+                for i in range(n_samples)
             ]
-
-
-            final_values.append(
-                values
-            )
-
-
-        shap_values = np.array(
-            final_values
         )
-
 
 
     else:
 
+        # New SHAP versions
 
-        shap_values = np.array(
+        arr = np.array(
             shap_values
         )
 
 
-
-    # Remove extra dimension
-
-    if len(shap_values.shape) == 3:
-
-        shap_values = shap_values[:,:,0]
+        if arr.ndim == 3:
 
 
+            # Format:
+            # (samples, features, classes)
+
+            if arr.shape[1] == n_features:
 
 
-    for i in range(len(X)):
+                per_sample_values = np.array(
+                    [
+                        arr[
+                            i,
+                            :,
+                            predictions[i]
+                        ]
+
+                        for i in range(n_samples)
+                    ]
+                )
 
 
-        values = np.abs(
-            shap_values[i]
-        )
+            # Format:
+            # (samples, classes, features)
+
+            elif arr.shape[2] == n_features:
 
 
-        index = np.argmax(
-            values
-        )
+                per_sample_values = np.array(
+                    [
+                        arr[
+                            i,
+                            predictions[i],
+                            :
+                        ]
+
+                        for i in range(n_samples)
+                    ]
+                )
 
 
-        if index < len(features):
+            else:
 
-            factors.append(
-                features[index]
-            )
+                raise ValueError(
+                    f"Unexpected SHAP shape: {arr.shape}"
+                )
+
 
         else:
 
-            factors.append(
-                "Unknown"
-            )
+            per_sample_values = arr
 
 
-    return factors
+
+    logger.info(
+        "SHAP values generated for %d employees",
+        n_samples
+    )
+
+
+
+    # ==================================================
+    # GET TOP 5 FEATURES
+    # ==================================================
+
+    top_features = []
+
+
+    for i in range(n_samples):
+
+
+        importance = np.abs(
+            per_sample_values[i]
+        )
+
+
+        indexes = np.argsort(
+            importance
+        )[-top_n:][::-1]
+
+
+
+        factors = [
+
+            features[index]
+
+            for index in indexes
+
+        ]
+
+
+        top_features.append(
+            ", ".join(factors)
+        )
+
+
+    return top_features
 
 
 
 
 
 # ======================================================
-# MAIN PREDICTION
+# MAIN PREDICTION FUNCTION
 # ======================================================
 
 def predict():
 
 
+    logger.info(
+        "Starting employee performance prediction..."
+    )
+
+
+    # Load models
+
     regressor, classifier = load_models()
 
 
+
+    # Load dataset
+
     df = load_data()
 
+
+
+    # Select latest employee record
 
     df = get_latest_quarter_per_employee(
         df
     )
 
 
-    print(
-        "\nPreparing features..."
+
+    logger.info(
+        "Preparing prediction features..."
     )
+
 
 
     features = joblib.load(
@@ -422,25 +478,41 @@ def predict():
     )
 
 
-    X = df[features]
+
+    X = df[
+        features
+    ]
+
+
+    X = X.fillna(
+        X.median()
+    )
 
 
 
-    # Regression prediction
+    # ==================================================
+    # REGRESSION PREDICTION
+    # ==================================================
 
     predicted_scores = (
 
-        regressor.predict(X)
+        regressor.predict(
+            X
+        )
 
     )
 
 
 
-    # Classification prediction
+    # ==================================================
+    # CLASSIFICATION PREDICTION
+    # ==================================================
 
     predicted_classes = (
 
-        classifier.predict(X)
+        classifier.predict(
+            X
+        )
 
     )
 
@@ -448,40 +520,36 @@ def predict():
 
     probabilities = (
 
-        classifier.predict_proba(X)
+        classifier.predict_proba(
+            X
+        )
 
     )
 
 
     confidence = (
 
-        probabilities.max(axis=1)
+        probabilities.max(
+            axis=1
+        )
 
     )
 
 
 
-    band_mapping = {
-
-        0:"Low",
-        1:"Medium",
-        2:"High"
-
-    }
-
-
-
     predicted_bands = [
 
-        band_mapping[x]
+        BAND_MAPPING[value]
 
-        for x in predicted_classes
+        for value in predicted_classes
 
     ]
 
 
 
-    # SHAP explanation
+    # ==================================================
+    # SHAP EXPLANATION
+    # ==================================================
 
     influential_factors = get_influential_factors(
 
@@ -491,7 +559,9 @@ def predict():
 
         features,
 
-        predicted_classes
+        predicted_classes,
+
+        top_n=5
 
     )
 
@@ -500,14 +570,11 @@ def predict():
     recommendations = [
 
         generate_recommendation(
-
-            factor,
-
+            factors,
             band
-
         )
 
-        for factor, band
+        for factors, band
 
         in zip(
             influential_factors,
@@ -516,116 +583,85 @@ def predict():
 
     ]
 
-
-
-    # Final output
-
+   # ==================================================
+    # CREATE OUTPUT
+    # ==================================================
 
     output = pd.DataFrame({
 
-
         "employee_id":
-
-        df["Employee ID"],
-
-
+            df["Employee ID"],
 
         "based_on_period":
-
-        df["Period Year"].astype(str)
-
-        +
-
-        "-"
-
-        +
-
-        df["Period Quarter"],
-
-
+            df["Period Year"].astype(str)
+            + "-"
+            + df["Period Quarter"],
 
         "predicted_period":
-
-        df.apply(
-
-            compute_predicted_period,
-
-            axis=1
-
-        ),
-
-
+            df.apply(
+                compute_predicted_period,
+                axis=1
+            ),
 
         "predicted_performance_score":
-
-        predicted_scores.round(2),
-
-
+            predicted_scores.round(2),
 
         "predicted_performance_band":
-
-        predicted_bands,
-
-
+            predicted_bands,
 
         "model_confidence":
+            confidence.round(3),
 
-        confidence.round(3),
-
-
-
-        "most_influential_factor":
-
-        influential_factors,
-
-
+        "top_5_influential_factors":
+            influential_factors,
 
         "recommendation":
-
-        recommendations
+            recommendations
 
     })
 
 
+    # ==================================================
+    # SAVE OUTPUT EXCEL
+    # ==================================================
+
+    try:
+
+        output.to_excel(
+            OUTPUT_FILE,
+            index=False
+        )
+
+        logger.info(
+            "Prediction file saved: %s",
+            OUTPUT_FILE
+        )
 
 
-    output.to_excel(
+    except PermissionError:
 
-        OUTPUT_FILE,
-
-        index=False
-
-    )
-
+        backup_file = (
+            RESULT_FOLDER /
+            "employee_performance_predictions_backup.xlsx"
+        )
 
 
-    print(
-
-        "\nPrediction completed!"
-
-    )
-
-
-    print(
-
-        "Rows:",
-
-        len(output)
-
-    )
+        output.to_excel(
+            backup_file,
+            index=False
+        )
 
 
-    print(
-
-        "Saved:",
-
-        OUTPUT_FILE
-
-    )
+        logger.warning(
+            "File locked. Saved backup: %s",
+            backup_file
+        )
 
 
 
-
+# ======================================================
+# RUN
+# ======================================================
 
 if __name__ == "__main__":
 
