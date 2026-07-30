@@ -10,30 +10,41 @@ def preprocess_data(df):
 
 
     # Convert Date of Birth into Age
-    df["Date of Birth"] = pd.to_datetime(
-        df["Date of Birth"],
-        errors="coerce"
-    )
 
-    current_year = datetime.now().year
+    if "Date of Birth" in df.columns:
 
-    df["Age"] = current_year - df["Date of Birth"].dt.year
+        df["Date of Birth"] = pd.to_datetime(
+            df["Date of Birth"],
+            errors="coerce"
+        )
 
-    # Remove original DOB column
-    df.drop(
-        columns=["Date of Birth"],
-        inplace=True
-    )
+        current_year = datetime.now().year
+
+        df["Age"] = (
+            current_year -
+            df["Date of Birth"].dt.year
+        )
+
+
+        df.drop(
+            columns=["Date of Birth"],
+            inplace=True
+        )
 
 
     # Remove Employee ID
-    df.drop(
-        columns=["Employee ID"],
-        inplace=True
-    )
+
+    if "Employee ID" in df.columns:
+
+        df.drop(
+            columns=["Employee ID"],
+            inplace=True
+        )
+
 
 
     # Remove metric name columns
+
     metric_name_columns = [
         "Metric 1 Name",
         "Metric 2 Name",
@@ -44,24 +55,67 @@ def preprocess_data(df):
         "Metric 7 Name"
     ]
 
+
+    existing_columns = [
+        col for col in metric_name_columns
+        if col in df.columns
+    ]
+
+
     df.drop(
-        columns=metric_name_columns,
+        columns=existing_columns,
         inplace=True
     )
 
 
-    # Encode categorical columns
+
+    # Remove accidental header rows
+
+    if "Gender" in df.columns:
+
+        df = df[
+            df["Gender"].astype(str).str.lower()
+            != "gender"
+        ]
+
+
+    if "Ethnicity" in df.columns:
+
+        df = df[
+            df["Ethnicity"].astype(str).str.lower()
+            != "ethnicity"
+        ]
+
+
+
+    # Encode categorical columns except fairness attributes
+
     categorical_columns = df.select_dtypes(
         include=["object"]
     ).columns
 
 
-    encoder = LabelEncoder()
+    fairness_columns = [
+        "Gender",
+        "Ethnicity"
+    ]
 
-    for col in categorical_columns:
+
+    encoding_columns = [
+        col for col in categorical_columns
+        if col not in fairness_columns
+    ]
+
+
+
+    for col in encoding_columns:
+
+        encoder = LabelEncoder()
+
         df[col] = encoder.fit_transform(
             df[col].astype(str)
         )
+
 
 
     return df

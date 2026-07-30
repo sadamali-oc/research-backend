@@ -1,60 +1,165 @@
 import pandas as pd
-from sklearn.metrics import confusion_matrix
+
 
 
 def analyze_gender_bias(df):
 
-    print("\n===== GENDER BIAS ANALYSIS =====")
+
+    if (
+        "Gender" not in df.columns
+        or "Performance Score" not in df.columns
+    ):
+
+        return {
+            "error": "Required columns not available"
+        }
 
 
-    gender_report = (
-        df.groupby("Gender")
-        ["Performance Category"]
-        .value_counts(normalize=True)
-        .unstack()
+
+    # Remove unknown demographic values
+
+    filtered_df = df[
+        df["Gender"].astype(str)
+        != "Unknown"
+    ]
+
+
+
+    gender_scores = (
+
+        filtered_df
+        .groupby("Gender")
+        ["Performance Score"]
+        .mean()
+
     )
 
 
-    print(gender_report)
+
+    if len(gender_scores) < 2:
+
+        return {
+            "error": "Insufficient gender groups"
+        }
 
 
-    return gender_report
+
+    bias_gap = (
+
+        gender_scores.max()
+        -
+        gender_scores.min()
+
+    )
+
+
+
+    result = {
+
+
+        "average_score_by_gender":
+            gender_scores.to_dict(),
+
+
+        "bias_gap":
+            round(
+                float(bias_gap),
+                2
+            ),
+
+
+        "status":
+
+            "Potential Bias"
+            if bias_gap > 10
+            else
+            "Fair"
+
+    }
+
+
+
+    return result
+
+
 
 
 
 def analyze_ethnicity_bias(df):
 
-    print("\n===== ETHNICITY BIAS ANALYSIS =====")
 
+    if (
+        "Ethnicity" not in df.columns
+        or "Performance Score" not in df.columns
+    ):
 
-    ethnicity_report = (
-        df.groupby("Ethnicity")
-        ["Performance Category"]
-        .value_counts(normalize=True)
-        .unstack()
-    )
-
-
-    print(ethnicity_report)
-
-
-    return ethnicity_report
+        return {
+            "error": "Required columns not available"
+        }
 
 
 
-def demographic_parity(df):
+    # Remove unknown demographic values
 
-    print("\n===== DEMOGRAPHIC PARITY =====")
+    filtered_df = df[
+        df["Ethnicity"].astype(str)
+        != "Unknown"
+    ]
 
 
-    result = (
-        df.groupby("Gender")
+
+    ethnicity_scores = (
+
+        filtered_df
+        .groupby("Ethnicity")
         ["Performance Score"]
         .mean()
+
     )
 
 
-    print(result)
+
+    if len(ethnicity_scores) < 2:
+
+        return {
+            "error": "Insufficient ethnicity groups"
+        }
+
+
+
+    bias_gap = (
+
+        ethnicity_scores.max()
+        -
+        ethnicity_scores.min()
+
+    )
+
+
+
+    result = {
+
+
+        "average_score_by_ethnicity":
+            ethnicity_scores.to_dict(),
+
+
+        "bias_gap":
+            round(
+                float(bias_gap),
+                2
+            ),
+
+
+        "status":
+
+            "Potential Bias"
+            if bias_gap > 10
+            else
+            "Fair"
+
+    }
+
 
 
     return result

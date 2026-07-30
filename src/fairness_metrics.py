@@ -1,201 +1,129 @@
 import pandas as pd
 
 
-def calculate_gender_fairness(df):
 
-    print("\n===== GENDER FAIRNESS METRICS =====")
-
-
-    # Create binary positive outcome
-    # High Performer = Positive outcome
-
-    df = df.copy()
-
-    df["Positive Outcome"] = (
-        df["Performance Category"]
-        .apply(
-            lambda x: 1 if x == "High Performer" else 0
-        )
-    )
+def demographic_parity(data):
 
 
-    # Remove groups with no valid records
+    if (
+        "Gender" not in data.columns
+        or "Performance Category" not in data.columns
+    ):
 
-    gender_counts = (
-        df["Gender"]
-        .value_counts()
-    )
-
-    valid_groups = (
-        gender_counts[
-            gender_counts >= 10
-        ]
-        .index
-    )
+        return None
 
 
-    fairness_df = df[
-        df["Gender"]
-        .isin(valid_groups)
+
+    filtered_data = data[
+        data["Gender"].astype(str)
+        != "Unknown"
     ]
 
 
-    # Positive outcome rate
 
-    positive_rates = (
-        fairness_df
-        .groupby("Gender")["Positive Outcome"]
-        .mean()
-    )
+    selection_rate = (
 
-
-    print("\nPositive Outcome Rate by Gender:")
-
-    print(positive_rates)
-
-
-
-    # --------------------------------
-    # Demographic Parity Difference
-    # --------------------------------
-
-    demographic_parity_difference = (
-        positive_rates.max()
-        -
-        positive_rates.min()
-    )
-
-
-    # --------------------------------
-    # Disparate Impact Ratio
-    # --------------------------------
-
-    min_rate = positive_rates.min()
-
-    max_rate = positive_rates.max()
-
-
-    if max_rate == 0:
-
-        disparate_impact_ratio = 0
-
-    else:
-
-        disparate_impact_ratio = (
-            min_rate / max_rate
+        filtered_data
+        .groupby("Gender")
+        ["Performance Category"]
+        .apply(
+            lambda x:
+            (
+                x == "High Performer"
+            ).mean()
         )
 
-
-
-    # --------------------------------
-    # Equal Opportunity Difference
-    # --------------------------------
-
-    # Using High Performer as positive class
-
-    true_positive_rates = (
-        fairness_df
-        .groupby("Gender")
-        ["Positive Outcome"]
-        .mean()
-    )
-
-
-    equal_opportunity_difference = (
-        true_positive_rates.max()
-        -
-        true_positive_rates.min()
     )
 
 
 
-    print(
-        f"\nDemographic Parity Difference: "
-        f"{demographic_parity_difference:.4f}"
+    if len(selection_rate) < 2:
+
+        return None
+
+
+
+    parity_ratio = (
+
+        selection_rate.min()
+        /
+        selection_rate.max()
+
     )
 
-
-    print(
-        f"Disparate Impact Ratio: "
-        f"{disparate_impact_ratio:.4f}"
-    )
-
-
-    print(
-        f"Equal Opportunity Difference: "
-        f"{equal_opportunity_difference:.4f}"
-    )
 
 
     return {
 
-        "Positive Outcome Rate": positive_rates.to_dict(),
+        "selection_rate":
+            selection_rate.to_dict(),
 
-        "Demographic Parity Difference":
-            demographic_parity_difference,
+        "parity_ratio":
+            round(
+                float(parity_ratio),
+                3
+            ),
 
-        "Disparate Impact Ratio":
-            disparate_impact_ratio,
+        "status":
 
-        "Equal Opportunity Difference":
-            equal_opportunity_difference
+            "Fair"
+            if parity_ratio >= 0.8
+            else
+            "Potential Bias"
+
     }
 
 
 
-def calculate_ethnicity_fairness(df):
-
-    print("\n===== ETHNICITY FAIRNESS ANALYSIS =====")
 
 
-    df = df.copy()
+def disparate_impact(data):
 
 
-    df["Positive Outcome"] = (
-        df["Performance Category"]
-        .apply(
-            lambda x:
-            1 if x == "High Performer"
-            else 0
-        )
+    result = demographic_parity(
+        data
     )
 
 
-    ethnicity_counts = (
-        df["Ethnicity"]
-        .value_counts()
-    )
+
+    if result is None:
+
+        return None
 
 
-    valid_groups = (
-        ethnicity_counts[
-            ethnicity_counts >= 10
-        ]
-        .index
-    )
+
+    return {
+
+        "disparate_impact_ratio":
+            result["parity_ratio"],
+
+        "status":
+            result["status"]
+
+    }
 
 
-    fairness_df = df[
-        df["Ethnicity"]
-        .isin(valid_groups)
-    ]
 
 
-    positive_rates = (
-        fairness_df
-        .groupby("Ethnicity")
-        ["Positive Outcome"]
-        .mean()
-    )
+
+def calculate_fairness_metrics(data):
 
 
-    print(
-        "\nPositive Outcome Rate by Ethnicity:"
-    )
-
-    print(
-        positive_rates
-    )
+    return {
 
 
-    return positive_rates
+        "demographic_parity":
+
+            demographic_parity(
+                data
+            ),
+
+
+
+        "disparate_impact":
+
+            disparate_impact(
+                data
+            )
+
+    }

@@ -1,4 +1,7 @@
 from pathlib import Path
+import json
+
+from sklearn.preprocessing import LabelEncoder
 
 from src.data_loader import load_employee_dataset
 from src.validator import validate_dataset
@@ -6,13 +9,8 @@ from src.preprocessing import preprocess_data
 from src.performance_score import generate_performance_score
 from src.model_training import train_performance_model
 
-from src.bias_detection import (
-    analyze_gender_bias,
-    analyze_ethnicity_bias,
-    demographic_parity
-)
+from src.fairness_engine import run_fairness_analysis
 
-from src.fairness_metrics import calculate_gender_fairness
 
 
 DATASET_PATH = Path(
@@ -20,19 +18,44 @@ DATASET_PATH = Path(
 )
 
 
+
+def encode_for_ml(df):
+
+    categorical_columns = df.select_dtypes(
+        include=["object", "string"]
+    ).columns
+
+
+    for col in categorical_columns:
+
+        encoder = LabelEncoder()
+
+        df[col] = encoder.fit_transform(
+            df[col].astype(str)
+        )
+
+
+    return df
+
+
+
+
+
 def main():
+
 
     # ==============================
     # LOAD DATASET
     # ==============================
 
-    df = load_employee_dataset(DATASET_PATH)
+    df = load_employee_dataset(
+        DATASET_PATH
+    )
+
 
     print("\n===== ORIGINAL DATASET =====")
     print(df.head())
 
-    print("\n===== COLUMN NAMES =====")
-    print(df.columns.tolist())
 
 
     # ==============================
@@ -42,50 +65,118 @@ def main():
     validate_dataset(df)
 
 
-    # ==============================
-    # PREPROCESSING
-    # ==============================
-
-    df = preprocess_data(df)
-
-    print("\n===== PREPROCESSED DATASET =====")
-    print(df.head())
-
-    print("\n===== DATA TYPES AFTER PREPROCESSING =====")
-    print(df.dtypes)
-
-
 
     # ==============================
-    # PERFORMANCE SCORE GENERATION
+    # CREATE FAIRNESS DATA COPY
     # ==============================
 
-    df = generate_performance_score(df)
+    fairness_data = df.copy()
 
 
-    print("\n===== FINAL DATASET WITH PERFORMANCE SCORE =====")
+
+    print("\n===== FAIRNESS DATA SAMPLE =====")
 
     print(
-        df[
+        fairness_data[
+            [
+                "Gender",
+                "Ethnicity"
+            ]
+        ].head()
+    )
+
+
+
+    # ==============================
+    # PREPROCESS FOR ML
+    # ==============================
+
+    processed_data = preprocess_data(
+        df.copy()
+    )
+
+
+    print("\n===== PREPROCESSED DATA =====")
+
+    print(
+        processed_data.head()
+    )
+
+
+
+    # ==============================
+    # GENERATE PERFORMANCE SCORE
+    # ==============================
+
+    processed_data = generate_performance_score(
+        processed_data
+    )
+
+
+
+    print("\n===== PERFORMANCE SCORE =====")
+
+    print(
+        processed_data[
             [
                 "Performance Score",
                 "Performance Category"
             ]
-        ].head(10)
+        ].head()
     )
 
 
-    print("\n===== SCORE STATISTICS =====")
 
-    print(
-        df["Performance Score"].describe()
+    # ==============================
+    # CREATE FAIRNESS SCORE DATA
+    # ==============================
+
+    fairness_processed = preprocess_data(
+        fairness_data.copy()
     )
 
 
-    print("\n===== PERFORMANCE CATEGORY DISTRIBUTION =====")
+    fairness_processed = generate_performance_score(
+        fairness_processed
+    )
+
+
+
+    # Restore original demographic values
+
+    fairness_processed["Gender"] = (
+        fairness_data["Gender"]
+        .values
+    )
+
+
+    fairness_processed["Ethnicity"] = (
+        fairness_data["Ethnicity"]
+        .values
+    )
+
+
+
+    print("\n===== FAIRNESS READY DATA =====")
 
     print(
-        df["Performance Category"].value_counts()
+        fairness_processed[
+            [
+                "Gender",
+                "Ethnicity",
+                "Performance Score"
+            ]
+        ].head()
+    )
+
+
+
+    # ==============================
+    # ENCODE ML DATA
+    # ==============================
+
+    ml_data = encode_for_ml(
+        processed_data
     )
 
 
@@ -94,17 +185,9 @@ def main():
     # SAVE PROCESSED DATASET
     # ==============================
 
-    output_path = Path(
-        "dataset/processed_employee_performance.csv"
-    )
-
-    df.to_csv(
-        output_path,
+    ml_data.to_csv(
+        "dataset/processed_employee_performance.csv",
         index=False
-    )
-
-    print(
-        f"\nProcessed dataset saved at: {output_path}"
     )
 
 
@@ -113,24 +196,9 @@ def main():
     # MODEL TRAINING
     # ==============================
 
-    train_performance_model(df)
-
-
-
-    # ==============================
-    # BIAS DETECTION
-    # ==============================
-
-    print("\n===== BIAS DETECTION RESULTS =====")
-
-
-    analyze_gender_bias(df)
-
-
-    analyze_ethnicity_bias(df)
-
-
-    demographic_parity(df)
+    train_performance_model(
+        ml_data
+    )
 
 
 
@@ -138,9 +206,42 @@ def main():
     # FAIRNESS ANALYSIS
     # ==============================
 
-    print("\n===== FAIRNESS METRICS =====")
+    print("\n===== FAIRNESS ANALYSIS =====")
 
-    calculate_gender_fairness(df)
+
+
+    fairness_results = run_fairness_analysis(
+        fairness_processed
+    )
+
+
+    print(
+        fairness_results
+    )
+
+
+
+    # ==============================
+    # SAVE REPORT
+    # ==============================
+
+    Path(
+        "outputs"
+    ).mkdir(
+        exist_ok=True
+    )
+
+
+    with open(
+        "outputs/fairness_report.json",
+        "w"
+    ) as file:
+
+        json.dump(
+            fairness_results,
+            file,
+            indent=4
+        )
 
 
 
@@ -151,4 +252,5 @@ def main():
 
 
 if __name__ == "__main__":
+
     main()

@@ -21,4 +21,12 @@ venv/
 
 # Logs
 *.log
+
+# Dataset
 dataset/
+
+# Generated outputs
+outputs/
+
+# Trained models
+models/
