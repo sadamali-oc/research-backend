@@ -19,8 +19,6 @@ import seaborn as sns
 from pathlib import Path
 from matplotlib.backends.backend_pdf import PdfPages
 
-from sklearn.model_selection import train_test_split
-
 from sklearn.metrics import (
     # Regression
     mean_absolute_error,
@@ -42,16 +40,7 @@ from sklearn.metrics import (
 # ======================================================
 # LOGGING SETUP
 # ======================================================
-# Using logging instead of scattered print() calls means all the
-# "status" text goes through one controllable channel. Set the level
-# to logging.WARNING if you want a near-silent run, or logging.DEBUG
-# for more detail.
 
-# ======================================================
-# LOGGING SETUP
-# ======================================================
-
-# Hide Matplotlib / fontTools PDF generation messages
 logging.getLogger("fontTools").setLevel(logging.ERROR)
 logging.getLogger("matplotlib").setLevel(logging.WARNING)
 
@@ -63,15 +52,13 @@ logging.basicConfig(
 
 logger = logging.getLogger("model_evaluation")
 
-logger = logging.getLogger("model_evaluation")
-
 
 # ======================================================
 # PDF FONT FIX
 # ======================================================
 
 plt.rcParams["font.family"] = "DejaVu Sans"
-plt.rcParams["pdf.fonttype"] = 42  # Embed fonts correctly in PDF
+plt.rcParams["pdf.fonttype"] = 42
 plt.rcParams["ps.fonttype"] = 42
 
 
@@ -91,6 +78,10 @@ RESULT_FOLDER.mkdir(exist_ok=True)
 CLASSIFIER_FILE = MODEL_FOLDER / "random_forest_classifier.pkl"
 REGRESSOR_FILE = MODEL_FOLDER / "random_forest_regressor.pkl"
 FEATURE_FILE = RESULT_FOLDER / "future_feature_names.pkl"
+
+# --- ADDED: same held-out employee IDs saved by train.py ---
+TEST_IDS_FILE = RESULT_FOLDER / "test_employee_ids.pkl"
+# -------------------------------------------------------------
 
 PDF_FILE = RESULT_FOLDER / "Final_Model_Evaluation_Report.pdf"
 
@@ -154,7 +145,7 @@ def prepare_features(df):
     features = joblib.load(FEATURE_FILE)
 
     X = df[features]
-    X = X.fillna(X.median())  # Missing value handling
+    X = X.fillna(X.median())
 
     y_class = df["Future_Performance_Category"]
     y_reg = df["Future_Performance_Score"]
@@ -163,13 +154,15 @@ def prepare_features(df):
 
 
 # ======================================================
-# REGRESSION EVALUATION
+# REGRESSION EVALUATION (leakage-free: uses saved test IDs)
 # ======================================================
 
-def evaluate_regression(model, X, y):
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
-    )
+def evaluate_regression(model, X, y, df):
+    test_ids = joblib.load(TEST_IDS_FILE)
+    mask = df["Employee ID"].isin(test_ids)
+
+    X_test = X[mask]
+    y_test = y[mask]
 
     prediction = model.predict(X_test)
 
@@ -185,13 +178,15 @@ def evaluate_regression(model, X, y):
 
 
 # ======================================================
-# CLASSIFICATION EVALUATION
+# CLASSIFICATION EVALUATION (leakage-free: uses saved test IDs)
 # ======================================================
 
-def evaluate_classification(model, X, y):
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
-    )
+def evaluate_classification(model, X, y, df):
+    test_ids = joblib.load(TEST_IDS_FILE)
+    mask = df["Employee ID"].isin(test_ids)
+
+    X_test = X[mask]
+    y_test = y[mask]
 
     prediction = model.predict(X_test)
     probability = model.predict_proba(X_test)
@@ -263,16 +258,10 @@ def create_pdf(
 
         page = 0
 
-        # ==================================================
-        # PAGE 1 - SUMMARY (now a clean title + two tables
-        # instead of one long free-floating text block)
-        # ==================================================
-
+        # PAGE 1 - SUMMARY
         page += 1
-
         fig = plt.figure(figsize=PAGE_SIZE)
 
-        # Title block
         fig.text(
             0.5, 0.92,
             "EMPLOYEE FUTURE PERFORMANCE",
@@ -289,7 +278,6 @@ def create_pdf(
             fontsize=10, ha="center", color="dimgray",
         )
 
-        # Regression metrics table
         ax_reg = fig.add_axes([0.10, 0.50, 0.35, 0.25])
         ax_reg.axis("off")
         ax_reg.set_title("Regression Results", fontsize=12, weight="bold", color=COLOR_PRIMARY, pad=15)
@@ -305,7 +293,6 @@ def create_pdf(
         reg_table.set_fontsize(10)
         reg_table.scale(1, 1.8)
 
-        # Classification metrics table
         ax_cls = fig.add_axes([0.55, 0.50, 0.35, 0.25])
         ax_cls.axis("off")
         ax_cls.set_title("Classification Results", fontsize=12, weight="bold", color=COLOR_PRIMARY, pad=15)
@@ -325,12 +312,8 @@ def create_pdf(
         pdf.savefig(fig)
         plt.close(fig)
 
-        # ==================================================
         # PAGE 2 - REGRESSION PERFORMANCE
-        # ==================================================
-
         page += 1
-
         fig, ax = plt.subplots(figsize=PAGE_SIZE)
 
         ax.scatter(y_reg_test, reg_prediction, alpha=0.7, color=COLOR_BLUE)
@@ -348,12 +331,8 @@ def create_pdf(
         pdf.savefig(fig)
         plt.close(fig)
 
-        # ==================================================
         # PAGE 3 - REGRESSION ERROR DISTRIBUTION
-        # ==================================================
-
         page += 1
-
         fig, ax = plt.subplots(figsize=PAGE_SIZE)
 
         residuals = y_reg_test.values - reg_prediction
@@ -367,12 +346,8 @@ def create_pdf(
         pdf.savefig(fig)
         plt.close(fig)
 
-        # ==================================================
         # PAGE 4 - CLASSIFICATION METRICS
-        # ==================================================
-
         page += 1
-
         fig, ax = plt.subplots(figsize=PAGE_SIZE)
 
         names = list(classification_metrics.keys())
@@ -386,68 +361,33 @@ def create_pdf(
         add_footer(fig, page, TOTAL_PAGES)
         pdf.savefig(fig)
         plt.close(fig)
-                # ==================================================
+
         # PAGE 5 - NORMALIZED CONFUSION MATRIX
-        # ==================================================
-
         page += 1
-
         fig, ax = plt.subplots(figsize=PAGE_SIZE)
 
-        cm_normalized = confusion_matrix(
-            y_test,
-            prediction,
-            normalize="true"
-        )
+        cm_normalized = confusion_matrix(y_test, prediction, normalize="true")
 
         sns.heatmap(
             cm_normalized,
             annot=True,
             fmt=".2f",
             cmap="Blues",
-            xticklabels=[
-                "Low",
-                "Medium",
-                "High"
-            ],
-            yticklabels=[
-                "Low",
-                "Medium",
-                "High"
-            ],
+            xticklabels=["Low", "Medium", "High"],
+            yticklabels=["Low", "Medium", "High"],
             ax=ax
         )
 
-        ax.set_title(
-            "Normalized Confusion Matrix"
-        )
+        ax.set_title("Normalized Confusion Matrix")
+        ax.set_xlabel("Predicted Performance Category")
+        ax.set_ylabel("Actual Performance Category")
 
-        ax.set_xlabel(
-            "Predicted Performance Category"
-        )
-
-        ax.set_ylabel(
-            "Actual Performance Category"
-        )
-
-        add_footer(
-            fig,
-            page,
-            TOTAL_PAGES
-        )
-
+        add_footer(fig, page, TOTAL_PAGES)
         pdf.savefig(fig)
-
         plt.close(fig)
 
-   
-
-        # ==================================================
         # PAGE 6 - ROC CURVE
-        # ==================================================
-
         page += 1
-
         fig, ax = plt.subplots(figsize=PAGE_SIZE)
 
         for i in range(3):
@@ -466,12 +406,8 @@ def create_pdf(
         pdf.savefig(fig)
         plt.close(fig)
 
-        # ==================================================
         # PAGE 7 - FEATURE IMPORTANCE
-        # ==================================================
-
         page += 1
-
         fig, ax = plt.subplots(figsize=PAGE_SIZE)
 
         imp = importance.sort_values("Importance (%)")
@@ -485,12 +421,8 @@ def create_pdf(
         pdf.savefig(fig)
         plt.close(fig)
 
-        # ==================================================
         # PAGE 8 - DATA DISTRIBUTION
-        # ==================================================
-
         page += 1
-
         fig, ax = plt.subplots(figsize=PAGE_SIZE)
 
         counts = df["Future_Performance_Category"].value_counts().sort_index()
@@ -522,7 +454,7 @@ def main():
     X, y_class, y_reg = prepare_features(df)
 
     y_reg_test, reg_prediction, regression_metrics = evaluate_regression(
-        regressor, X, y_reg
+        regressor, X, y_reg, df
     )
 
     (
@@ -531,7 +463,7 @@ def main():
         probability,
         classification_metrics,
         report,
-    ) = evaluate_classification(classifier, X, y_class)
+    ) = evaluate_classification(classifier, X, y_class, df)
 
     importance = get_feature_importance(classifier, X)
 
